@@ -1,43 +1,45 @@
-# 预测示例 (C++)
+# 예측 예제 (C++)
 
-本章节包含2部分内容：(1) [运行 C++ 示例程序](#id1)；(2) [C++ 预测程序开发说明](#id5)。
+본 장은 두 부분으로 구성됩니다:  
+(1) [C++ 예제 프로그램 실행하기](#id1)  
+(2) [C++ 예측 프로그램 개발 안내](#id5)
 
-## 运行 C++ 示例程序
+## C++ 예제 프로그램 실행하기
 
-### 1. 下载预编译 C++ 预测库
+### 1. 사전 빌드된 C++ 예측 라이브러리 다운로드
 
-Paddle Inference 提供了 Ubuntu/Windows/MacOS 平台的官方Release预测库下载，如果您使用的是以上平台，我们优先推荐您通过以下链接直接下载，或者您也可以参照文档进行[源码编译](../user_guides/source_compile.html)。
+Paddle Inference는 Ubuntu/Windows/MacOS 플랫폼에 대해 공식 릴리스된 예측 라이브러리를 제공합니다. 위 플랫폼 중 하나를 사용 중이라면 아래 링크에서 직접 다운로드를 권장하며, 필요시 [소스 컴파일](../user_guides/source_compile.html) 방법도 참고할 수 있습니다.
 
-- [下载安装Linux预测库](../user_guides/download_lib.html#linux)
-- [下载安装Windows预测库](../user_guides/download_lib.html#windows)
+- [Linux 예측 라이브러리 다운로드 및 설치](../user_guides/download_lib.html#linux)  
+- [Windows 예측 라이브러리 다운로드 및 설치](../user_guides/download_lib.html#windows)
 
-下载完成并解压之后，目录下的 `paddle_inference_install_dir` 即为 C++ 预测库，目录结构如下：
+다운로드 후 압축을 해제하면, `paddle_inference_install_dir` 폴더가 C++ 예측 라이브러리이며, 폴더 구조는 다음과 같습니다:
 
 ```bash
 paddle_inference/paddle_inference_install_dir/
 ├── CMakeCache.txt
 ├── paddle
-│   ├── include                                    C++ 预测库头文件目录
+│   ├── include                                    # C++ 예측 라이브러리 헤더 파일 디렉터리
 │   │   ├── crypto
 │   │   ├── internal
 │   │   ├── paddle_analysis_config.h
 │   │   ├── paddle_api.h
 │   │   ├── paddle_infer_declare.h
-│   │   ├── paddle_inference_api.h                 C++ 预测库头文件
+│   │   ├── paddle_inference_api.h                 # C++ 예측 라이브러리 헤더 파일
 │   │   ├── paddle_mkldnn_quantizer_config.h
 │   │   └── paddle_pass_builder.h
 │   └── lib
-│       ├── libpaddle_inference.a                      C++ 静态预测库文件
-│       └── libpaddle_inference.so                     C++ 动态态预测库文件
+│       ├── libpaddle_inference.a                   # C++ 정적 예측 라이브러리 파일
+│       └── libpaddle_inference.so                  # C++ 동적 예측 라이브러리 파일
 ├── third_party
-│   ├── install                                    第三方链接库和头文件
+│   ├── install                                    # 서드파티 링크 라이브러리 및 헤더 파일
 │   │   ├── cryptopp
 │   │   ├── gflags
 │   │   ├── glog
 │   │   ├── mkldnn
 │   │   ├── mklml
-│   │   ├── openvino        OpenVINO 推理后端
-│   │   ├── tbb             OpenVINO 多线程后端
+│   │   ├── openvino        # OpenVINO 추론 백엔드
+│   │   ├── tbb             # OpenVINO 멀티스레드 백엔드
 │   │   ├── protobuf
 │   │   └── xxhash
 │   └── threadpool
@@ -45,7 +47,9 @@ paddle_inference/paddle_inference_install_dir/
 └── version.txt
 ```
 
-其中 `version.txt` 文件中记录了该预测库的版本信息，包括Git Commit ID、使用OpenBlas或MKL数学库、CUDA/CUDNN版本号，如：
+`version.txt` 파일에는 예측 라이브러리의 버전 정보가 기록되어 있습니다.  
+여기에는 Git 커밋 ID, OpenBlas 또는 MKL 수학 라이브러리 사용 여부, CUDA/CUDNN 버전 정보 등이 포함됩니다.  
+예시는 다음과 같습니다:
 
 ```bash
 GIT COMMIT ID: 1bf4836580951b6fd50495339a7a75b77bf539f6
@@ -60,66 +64,69 @@ OpenVINO version: 2024.5.0
 WITH_TENSORRT: ON
 TensorRT version: v6
 ```
+### 2. 예측 예제 코드 다운로드 및 컴파일
 
-### 2. 获取预测示例代码并编译
-
-本章节 C++ 预测示例代码位于 [Paddle-Inference-Demo/c++/resnet50](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c++/resnet50)。目录包含以下文件：
+본 장의 C++ 예측 예제 코드는 [Paddle-Inference-Demo/c++/resnet50](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c++/resnet50) 경로에 있습니다. 디렉터리에는 다음과 같은 파일들이 포함되어 있습니다:
 
 ```bash
 Paddle-Inference-Demo/c++/resnet50/
-├── resnet50_test.cc   预测 C++ 源码程序
-├── README.md          README 说明
-├── compile.sh         编译脚本
-└── run.sh             运行脚本 
+├── resnet50_test.cc   # 예측용 C++ 소스 코드
+├── README.md          # README 설명 파일
+├── compile.sh         # 컴파일 스크립트
+└── run.sh             # 실행 스크립트
 ```
 
-编译运行预测样例之前，需要根据运行环境配置编译脚本 `compile.sh`。
+컴파일 및 예측 예제 실행 전에, 실행 환경에 맞게 컴파일 스크립트 `compile.sh`를 설정해야 합니다.
 
 ```bash
-# 根据预编译库中的version.txt信息判断是否将以下四个标记打开
+# 사전 빌드된 라이브러리의 version.txt 정보를 참고하여 아래 네 개 플래그를 ON/OFF 설정
 WITH_MKL=ON       
 WITH_GPU=ON         
 WITH_OPENVINO=OFF    
 USE_TENSORRT=OFF
 
-# 配置预测库的根目录，即为本章节第1步中下载/编译的 C++ 预测库，可重命名为 paddle_inference 后置于 ../lib 目录下
+# 예측 라이브러리의 루트 디렉터리 경로 설정 (본 장 1단계에서 다운로드/컴파일한 C++ 예측 라이브러리)
+# paddle_inference로 이름 변경 후 ../lib 디렉터리 아래에 위치 가능
 LIB_DIR=${work_path}/../lib/paddle_inference
 
-# 如果上述的 WITH_GPU 或 USE_TENSORRT 设为ON，请设置对应的 CUDA, CUDNN, TENSORRT的路径，例如
+# WITH_GPU 또는 USE_TENSORRT가 ON일 경우 CUDA, CUDNN, TENSORRT 경로를 설정
 CUDNN_LIB=/usr/lib/x86_64-linux-gnu/
 CUDA_LIB=/usr/local/cuda/lib64
 TENSORRT_ROOT=/usr/local/TensorRT-6.0.1.5
 ```
-运行脚本进行编译，会在目录下产生 `build` 目录，并生成 `build/resnet50_test` 可执行文件
+
+스크립트를 실행하여 컴파일하면, 현재 디렉터리에 build 폴더가 생성되고, 그 안에 build/resnet50_test 실행 파일이 만들어집니다.
 
 ```bash
 bash compile.sh
 ```
 
-### 3. 执行预测程序
+### 3. 예측 프로그램 실행
 
-**注意**：Paddle Inference 提供下载的C++预测库对应的 GCC 版本与您电脑中GCC版本需要一致，如果不一致可能出现未知错误。
+**주의**: Paddle Inference에서 제공하는 C++ 예측 라이브러리는 사용자의 컴퓨터에 설치된 GCC 버전과 일치해야 합니다. 버전이 다를 경우 알 수 없는 오류가 발생할 수 있습니다.
 
-运行脚本 `run.sh` 执行预测程序。
+`run.sh` 스크립트를 실행하여 예측 프로그램을 실행합니다.
 
 ```bash
 bash run.sh
 ```
 
-脚本说明：
+스크립트 설명:
+
 ```bash
-# 脚本 run.sh 会首先下载预测部署模型，如需查看模型结构，可将 `inference.pdmodel` 加载到可视化工具 Netron 中打开。
+# run.sh 스크립트는 먼저 예측 배포 모델을 다운로드합니다.
+# 모델 구조를 확인하려면 `inference.pdmodel` 파일을 Netron과 같은 시각화 도구에서 열 수 있습니다.
 wget https://paddle-inference-dist.bj.bcebos.com/Paddle-Inference-Demo/resnet50.tgz
 tar xzf resnet50.tgz
 
-# 加载下载的模型，执行预测程序
+# 다운로드한 모델을 로드하고 예측 프로그램을 실행합니다.
 ./build/resnet50_test --model_file resnet50/inference.pdmodel --params_file resnet50/inference.pdiparams
 ```
 
-成功执行之后，得到的预测输出结果如下：
+성공적으로 실행된 후, 얻은 예측 출력 결과는 다음과 같습니다:
 
 ```bash
-# 程序输出结果如下
+# 프로그램 출력 결과 예시
 I1202 06:53:18.979496  3411 resnet50_test.cc:73] run avg time is 257.678 ms
 I1202 06:53:18.979645  3411 resnet50_test.cc:88] 0 : 0
 I1202 06:53:18.979676  3411 resnet50_test.cc:88] 100 : 2.04164e-37
@@ -132,79 +139,82 @@ I1202 06:53:18.979810  3411 resnet50_test.cc:88] 700 : 2.04094e-23
 I1202 06:53:18.979820  3411 resnet50_test.cc:88] 800 : 3.85254e-25
 I1202 06:53:18.979828  3411 resnet50_test.cc:88] 900 : 1.52393e-30
 ```
+## C++ 예측 프로그램 개발 안내
 
-## C++ 预测程序开发说明
+Paddle Inference를 사용하여 C++ 예측 프로그램을 개발하려면 다음 다섯 단계만 따르면 됩니다.
 
-使用 Paddle Inference 开发 C++ 预测程序仅需以下五个步骤：
-
-
-(1) 引用头文件
+(1) 헤더 파일 포함
 
 ```c++
 #include "paddle_inference_api.h"
 ```
 
-(2) 创建配置对象，并根据需求配置，详细可参考 [C++ API 文档 - Config](../api_reference/cxx_api_doc/Config_index)
+(2) 설정 객체 생성 및 필요에 따라 설정  
+자세한 내용은 [C++ API 문서 - Config](../api_reference/cxx_api_doc/Config_index) 참고
 
 ```c++
-// 创建默认配置对象
+// 기본 설정 객체 생성
 paddle_infer::Config config;
 
-// 设置预测模型路径，即为本小节第2步中下载的模型
+// 예측 모델 경로 설정 (본 장 2단계에서 다운로드한 모델)
 config.SetModel(FLAGS_model_file, FLAGS_params_file);
 
-// 启用 GPU 和 MKLDNN 预测
+// GPU 및 MKLDNN 예측 활성화
 config.EnableUseGpu(100, 0);
 config.EnableMKLDNN();
 
-// 开启 内存/显存 复用
+// 메모리 및 비디오 메모리 재사용 활성화
 config.EnableMemoryOptim();
 ```
 
-(3) 根据 Config 创建预测对象，详细可参考 [C++ API 文档 - Predictor](../api_reference/cxx_api_doc/Predictor)
-
+(3) Config를 기반으로 예측 객체 생성  
+자세한 내용은 [C++ API 문서 - Predictor](../api_reference/cxx_api_doc/Predictor) 참고
 ```c++
 auto predictor = paddle_infer::CreatePredictor(config);
 ```
 
-(4) 设置模型输入 Tensor，详细可参考 [C++ API 文档 - Tensor](../api_reference/cxx_api_doc/Tensor)
+(4) 모델 입력 Tensor 설정  
+자세한 내용은 [C++ API 문서 - Tensor](../api_reference/cxx_api_doc/Tensor) 참고
 
 ```c++
-// 获取输入 Tensor
+// 입력 Tensor 가져오기
 auto input_names = predictor->GetInputNames();
 auto input_tensor = predictor->GetInputHandle(input_names[0]);
 
-// 设置输入 Tensor 的维度信息
+// 입력 Tensor 차원 설정
 std::vector<int> INPUT_SHAPE = {1, 3, 224, 224};
 input_tensor->Reshape(INPUT_SHAPE);
 
-// 准备输入数据
+// 입력 데이터 준비
 int input_size = 1 * 3 * 224 * 224;
 std::vector<float> input_data(input_size, 1);
-// 设置输入 Tensor 数据
+
+// 입력 Tensor에 데이터 복사
 input_tensor->CopyFromCpu(input_data.data());
 ```
 
-(5) 执行预测，详细可参考 [C++ API 文档 - Predictor](../api_reference/cxx_api_doc/Predictor)
+5. 예측 실행  
+자세한 내용은 [C++ API 문서 - Predictor](../api_reference/cxx_api_doc/Predictor) 참고
 
 ```c++
-// 执行预测
+// 예측 실행
 predictor->Run();
 ```
 
-(6) 获得预测结果，详细可参考 [C++ API 文档 - Tensor](../api_reference/cxx_api_doc/Tensor)
+6. 예측 결과 획득  
+자세한 내용은 [C++ API 문서 - Tensor](../api_reference/cxx_api_doc/Tensor) 참고
 
 ```c++
-// 获取 Output Tensor
+// 출력 Tensor 가져오기
 auto output_names = predictor->GetOutputNames();
 auto output_tensor = predictor->GetOutputHandle(output_names[0]);
 
-// 获取 Output Tensor 的维度信息
+// 출력 Tensor 차원 정보 가져오기
 std::vector<int> output_shape = output_tensor->shape();
 int output_size = std::accumulate(output_shape.begin(), output_shape.end(), 1,
                                   std::multiplies<int>());
 
-// 获取 Output Tensor 的数据
+// 출력 Tensor 데이터 가져오기
 std::vector<float> output_data;
 output_data.resize(output_size);
 output_tensor->CopyToCpu(output_data.data());

@@ -1,47 +1,102 @@
-# 预测流程
+# 예측 프로세스
 
 <p align="center"><img width="800" src="https://raw.githubusercontent.com/PaddlePaddle/Paddle-Inference-Demo/master/docs/images/workflow.png"/></p>
 
-## 一. 准备模型
+```plaintext
+Paddle (파들)  --->  Paddle 추론 모델
+                  ( __model__
+                    conv1_bn_mean
+                    conv1_bn_offset
+                    conv1_bn_scale )
 
-Paddle Inference 原生支持由 [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) 深度学习框架训练产出的推理模型。新版本 PaddlePaddle 用于推理的模型分别通过 `paddle.jit.save` (动态图) 与 `paddle.static.save_inference_model` (静态图) 或 `paddle.Model().save` (高层API) 保存下来；老版本的 PaddlePaddle 用于推理的模型通过 `fluid.io.save_inference_model` 这个API保存下来。更详细的说明请参考[这里](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/02_paddle2.0_develop/08_model_save_load_cn.html)。
+TensorFlow / Caffe / ONNX  ---> 모델 변환 도구 (X2Paddle) ---> Paddle 추론 모델
 
-如果您手中的模型是由诸如 Caffe、Tensorflow、PyTorch 等框架产出的，那么您可以使用 [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) 工具将模型转换为 PadddlePaddle 格式。
+1️⃣ 모델 양자화 / 가지치기 (PaddleSlim)
+   ↘︎
+    Paddle 추론 모델
+    ↓
+2️⃣ 환경 준비
+   (다운로드 / 설치 / 컴파일
+   Paddle 추론 라이브러리)
 
-## 二. 准备环境
+3️⃣ 예측 프로그램 개발 / 컴파일
 
-### 1) Python 环境
+입력 데이터  --->  예측 실행  --->  출력 데이터
+```
+## 1. 모델 준비
 
-请参照 [官方主页-快速安装](https://www.paddlepaddle.org.cn/install/quick) 页面进行自行安装或编译，当前支持 pip/conda 安装，docker镜像 以及源码编译等多种方式来准备 Paddle Inference 开发环境。
+Paddle Inference는 [PaddlePaddle](https://github.com/PaddlePaddle/Paddle) 딥러닝 프레임워크로 훈련된 추론 모델을 네이티브로 지원합니다.  
+신버전 PaddlePaddle에서는 추론 모델을 각각 `paddle.jit.save`(동적 그래프), `paddle.static.save_inference_model`(정적 그래프), 또는 `paddle.Model().save`(고수준 API)로 저장합니다.  
+구버전 PaddlePaddle에서는 `fluid.io.save_inference_model` API로 추론 모델을 저장합니다.  
+자세한 내용은 [여기](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/02_paddle2.0_develop/08_model_save_load_cn.html)를 참고하세요.
 
-### 2) C++ 环境
+Caffe, TensorFlow, PyTorch 등 타 프레임워크에서 만든 모델이라면, [X2Paddle](https://github.com/PaddlePaddle/X2Paddle) 도구를 사용해 PaddlePaddle 형식으로 변환할 수 있습니다.
 
-Paddle Inference 提供了 Ubuntu/Windows/MacOS 平台的官方Release预测库下载，如果您使用的是以上平台，我们优先推荐您通过以下链接直接下载，或者您也可以参照文档进行[源码编译](https://paddleinference.paddlepaddle.org.cn/user_guides/source_compile.html)。
+## 2. 환경 준비
 
-- [下载安装Linux预测库](https://paddleinference.paddlepaddle.org.cn/user_guides/download_lib.html#linux) 
-- [下载安装Windows预测库](https://paddleinference.paddlepaddle.org.cn/user_guides/download_lib.html#windows)
+### 1) Python 환경
 
-## 三. 开发预测程序
+[Paddle 공식 홈페이지 - 빠른 설치](https://www.paddlepaddle.org.cn/install/quick) 페이지를 참고해 직접 설치 또는 컴파일하세요.  
+현재 pip/conda 설치, 도커 이미지, 소스 컴파일 등 다양한 방법으로 Paddle Inference 개발 환경을 준비할 수 있습니다.
 
-Paddle Inference采用 Predictor 进行预测。Predictor 是一个高性能预测引擎，该引擎通过对计算图的分析，完成对计算图的一系列的优化（如OP的融合、内存/显存的优化、 MKLDNN，TensorRT 等底层加速库的支持等），能够大大提升预测性能。
+### 2) C++ 환경
+
+Paddle Inference는 Ubuntu/Windows/MacOS 플랫폼에 대해 공식 Release 예측 라이브러리를 제공합니다.  
+위 플랫폼 중 하나를 사용 중이라면 아래 링크에서 직접 다운로드를 권장하며, 필요 시 [소스 컴파일](https://paddleinference.paddlepaddle.org.cn/user_guides/source_compile.html) 방법도 참고하세요.
+
+- [Linux 예측 라이브러리 다운로드 및 설치](https://paddleinference.paddlepaddle.org.cn/user_guides/download_lib.html#linux)  
+- [Windows 예측 라이브러리 다운로드 및 설치](https://paddleinference.paddlepaddle.org.cn/user_guides/download_lib.html#windows)
+
+## 3. 예측 프로그램 개발
+
+Paddle Inference는 Predictor를 사용해 예측을 수행합니다.  
+Predictor는 계산 그래프를 분석해 OP 융합, 메모리 최적화, MKLDNN 및 TensorRT 같은 하위 가속 라이브러리 지원 등 일련의 최적화를 적용해 예측 성능을 크게 향상시키는 고성능 예측 엔진입니다.
 
 <p align="center"><img width="800" src="https://raw.githubusercontent.com/PaddlePaddle/Paddle-Inference-Demo/master/docs/images/predict.png"/></p>
 
-开发预测程序只需要简单的5个步骤 (这里以C++ API为例)：
+```
+1. 예측 설정 관리자 
+   `paddle_infer::Config`  
+   - 모델 경로 설정  
+   - 실행 장치 지정  
+   - 최적화 옵션 설정  
 
-1. 配置推理选项 `paddle_infer::Config`，包括设置模型路径、运行设备、开启/关闭计算图优化、使用MKLDNN/TensorRT进行部署的加速等。
-2. 创建推理引擎 `paddle_infer::Predictor`，通过调用 `CreatePredictor(Config)` 接口，一行代码即可完成引擎初始化，其中 `Config` 为第1步中生成的配置推理选项。
-3. 准备输入数据，需要以下几个步骤
-    - 先通过 `auto input_names = predictor->GetInputNames()` 获取模型所有输入 Tensor 的名称
-    - 再通过 `auto tensor = predictor->GetInputTensor(input_names[i])` 获取输入 Tensor 的指针
-    - 最后通过 `tensor->copy_from_cpu(data)`，将 data 中的数据拷贝到 tensor 中
-4. 执行预测，只需要运行`predictor->Run()`一行代码，即可完成预测执行
-5. 获得预测结果，需要以下几个步骤
-    - 先通过 `auto out_names = predictor->GetOutputNames()` 获取模型所有输出 Tensor 的名称
-    - 再通过 `auto tensor = predictor->GetOutputTensor(out_names[i])` 获取输出 Tensor的 指针
-    - 最后通过 `tensor->copy_to_cpu(data)`，将 tensor 中的数据 copy 到 data 指针上
+2. 예측 엔진 생성  
+   `paddle_infer::Predictor`  
+   - 예측 모델 계산 그래프 분석 및 최적화:  
+     - OP 융합  
+     - 메모리 / 캐시 최적화  
+     - MKLDNN, TensorRT 등의 가속 라이브러리 지원  
 
-Paddle Inference 提供了C++, Python 两种API的使用示例和开发说明文档，您可以参考示例中的说明快速了解使用方法，并集成到您自己的项目中去。
+3. 입력 데이터  
+   `paddle_infer::Tensor`  
 
-- [预测示例 (C++)](./cpp_demo)
-- [预测示例 (Python)](./python_demo)
+4. 예측 실행
+   `predictor->Run()`  
+
+5. 예측 결과  
+   `paddle_infer::Tensor`
+```
+
+예측 프로그램 개발은 간단한 5단계로 이루어집니다 (여기서는 C++ API 기준):
+
+1. 추론 옵션 설정 (`paddle_infer::Config`)  
+   - 모델 경로, 실행 디바이스, 계산 그래프 최적화 활성화 여부, MKLDNN/TensorRT 가속 사용 등 설정
+2. 추론 엔진 생성 (`paddle_infer::Predictor`)  
+   - `CreatePredictor(Config)` 호출로 엔진 초기화
+3. 입력 데이터 준비  
+   - `auto input_names = predictor->GetInputNames()`로 모든 입력 Tensor 이름 획득  
+   - `auto tensor = predictor->GetInputTensor(input_names[i])`로 입력 Tensor 포인터 획득  
+   - `tensor->copy_from_cpu(data)`로 데이터 복사
+4. 예측 실행  
+   - `predictor->Run()` 호출
+5. 예측 결과 획득  
+   - `auto out_names = predictor->GetOutputNames()`로 출력 Tensor 이름 획득  
+   - `auto tensor = predictor->GetOutputTensor(out_names[i])`로 출력 Tensor 포인터 획득  
+   - `tensor->copy_to_cpu(data)`로 데이터 복사
+
+Paddle Inference는 C++ 및 Python API 사용 예제와 개발 문서를 제공합니다.  
+예제를 참고해 빠르게 사용법을 익히고, 프로젝트에 통합할 수 있습니다.
+
+- [예측 예제 (C++)](./cpp_demo)  
+- [예측 예제 (Python)](./python_demo)
