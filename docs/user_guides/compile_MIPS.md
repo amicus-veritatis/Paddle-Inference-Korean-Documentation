@@ -145,6 +145,8 @@ PaddlePaddle is installed successfully! 메시지가 출력되면 설치가 완�
 mobilenetv1 및 resnet50 테스트:
 ```
 wget -O profile.tar https://paddle-cetc15.bj.bcebos.com/profile.tar?authorization=bce-auth-v1/4409a3f3dd76482ab77af112631f01e4/2020-10-09T10:11:53Z/-1/host/786789f3445f498c6a1fd4d9cd3897ac7233700df0c6ae2fd78079eba89bf3fb
+```
+```
 tar xf profile.tar && cd profile
 ```
 ```
@@ -152,6 +154,11 @@ python resnet.py --model_file ResNet50_inference/model --params_file ResNet50_in
 # 예상 출력:
 # [0.0002414  0.00022418 0.00053661 0.00028639 0.00072682 0.000213
 #  0.00638718 0.00128127 0.00013535 0.0007676 ]
+```
+```
+python mobilenetv1.py --model_file mobilenetv1/model --params_file mobilenetv1/params
+# 正确输出应为：[0.00123949 0.00100392 0.00109539 0.00112206 0.00101901 0.00088412
+#              0.00121536 0.00107679 0.00106071 0.00099605]
 ```
 ```
 python ernie.py --model_dir ernieL3H128_model/
