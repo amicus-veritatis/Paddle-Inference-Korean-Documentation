@@ -1,9 +1,9 @@
-# 下载安装 Linux 推理库
-## C++ 推理库
+# Linux 추론 라이브러리 다운로드 및 설치  
+## C++ 추론 라이브러리
 
-- 预编译包使用方式见：[推理示例（C++）](../quick_start/cpp_demo.md)
+- 사전 컴파일된 패키지 사용 방법은 다음을 참조하세요: [추론 예제(C++)](../quick_start/cpp_demo.md)
 
-|硬件后端|是否打开 avx|数学库|gcc 版本|CUDA/cuDNN/TensorRT 版本|推理库(2.4.0 版本)|
+| 하드웨어 백엔드 | AVX 활성화 여부 | 수학 라이브러리 | gcc 버전 | CUDA/cuDNN/TensorRT 버전 | 추론 라이브러리(버전 2.4.0) |
 |--------------|--------------|--------------|--------------|--------------|:-----------------|
 |CPU|是|MKL|8.2|-|[paddle_inference.tgz](https://paddle-inference-lib.bj.bcebos.com/2.4.0/cxx_c/Linux/CPU/gcc8.2_avx_mkl/paddle_inference.tgz)|
 |CPU|是|MKL|5.4|-|[paddle_inference.tgz](https://paddle-inference-lib.bj.bcebos.com/2.4.0/cxx_c/Linux/CPU/gcc5.4_avx_mkl/paddle_inference.tgz)|
