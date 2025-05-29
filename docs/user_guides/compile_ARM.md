@@ -134,7 +134,8 @@ python ernie.py --model_dir ernieL3H128_model/
 # 출력 예시:
 # [0.49879393 0.5012061 ]
 ```
-제거 방법
+## **제거 방법**
+
 다음 명령어를 사용하여 PaddlePaddle을 삭제할 수 있습니다:
 ```
 pip uninstall paddlepaddle 또는 pip3 uninstall paddlepaddle
