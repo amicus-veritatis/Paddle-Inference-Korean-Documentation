@@ -1,145 +1,169 @@
-# X86 CPU 上部署量化模型
+# X86 CPU에서 양자화 모델 배포
 
-## 1 概述
+## 1. 개요
 
-众所周知，模型量化可以有效加快模型预测性能，飞桨也提供了强大的模型量化功能。所以，本文主要介绍在X86 CPU部署PaddleSlim产出的量化模型。
+모델 양자화는 모델 추론 성능을 효과적으로 향상시킬 수 있는 방법으로 잘 알려져 있으며, PaddlePaddle은 강력한 양자화 기능을 제공합니다.  
+이 문서에서는 X86 CPU에서 PaddleSlim이 생성한 양자화 모델을 배포하는 방법을 소개합니다.
 
-对于常见图像分类模型，在Casecade Lake机器上（例如Intel® Xeon® Gold 6271、6248，X2XX等），图片分类模型INT8模型预测性能可达FP32模型的3-3.7倍, 自然语言处理模型INT8模型预测性能可达到FP32的1.5-3倍；在SkyLake机器上（例如Intel® Xeon® Gold 6148、8180，X1XX等），图片分类INT8模型预测性能可达FP32模型的1.5倍左右。
+일반적인 이미지 분류 모델의 경우, Casecade Lake 아키텍처(예: Intel® Xeon® Gold 6271, 6248, X2XX 등)에서는  
+INT8 양자화 모델이 FP32 모델보다 **3~3.7배** 빠른 추론 성능을 보이며,  
+자연어 처리 모델의 경우 INT8 모델이 FP32 대비 **1.5~3배** 빠릅니다.  
+SkyLake 아키텍처(예: Xeon Gold 6148, 8180 등)에서는 이미지 분류 모델의 INT8 추론 성능이 FP32 대비 **1.5배 수준**입니다.
 
-X86 CPU部署量化模型的步骤：
-* 产出量化模型：使用PaddleSlim训练并产出量化模型
-* 转换量化模型：将量化模型转换成最终部署的量化模型
-* 部署量化模型：使用Paddle Inference预测库部署量化模型
+X86 CPU에서 양자화 모델을 배포하는 절차는 다음과 같습니다:
 
-## 2 图像分类INT8模型在 Xeon(R) 6271 上的精度和性能
+- **양자화 모델 생성**: PaddleSlim을 사용해 양자화 모델 훈련 및 생성
+- **모델 변환**: 생성된 양자화 모델을 최종 배포용 형식으로 변환
+- **모델 배포**: Paddle Inference 추론 엔진으로 배포
 
->**图像分类INT8模型在 Intel(R) Xeon(R) Gold 6271 上精度**
+## 2. Xeon(R) 6271에서 이미지 분류 INT8 모델의 정확도 및 성능
 
-|     Model    | FP32 Top1 Accuracy | INT8 Top1 Accuracy | Top1 Diff | FP32 Top5 Accuracy | INT8 Top5 Accuracy | Top5 Diff |
-|:------------:|:------------------:|:------------------:|:---------:|:------------------:|:------------------:|:---------:|
-| MobileNet-V1 |       70.78%       |       70.74%       |   -0.04%  |       89.69%       |       89.43%       |   -0.26%  |
-| MobileNet-V2 |       71.90%       |       72.21%       |   0.31%   |       90.56%       |       90.62%       |   0.06%   |
-|   ResNet101  |       77.50%       |       77.60%       |   0.10%   |       93.58%       |       93.55%       |   -0.03%  |
-|   ResNet50   |       76.63%       |       76.50%       |   -0.13%  |       93.10%       |       92.98%       |   -0.12%  |
-|     VGG16    |       72.08%       |       71.74%       |   -0.34%  |       90.63%       |       89.71%       |   -0.92%  |
-|     VGG19    |       72.57%       |       72.12%       |   -0.45%  |       90.84%       |       90.15%       |   -0.69%  |
+> **정확도**
 
->**图像分类INT8模型在 Intel(R) Xeon(R) Gold 6271 单核上性能**
+|     모델     | FP32 Top1 | INT8 Top1 | Top1 차이 | FP32 Top5 | INT8 Top5 | Top5 차이 |
+|:------------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|
+| MobileNet-V1 |  70.78%   |  70.74%   |  -0.04%   |  89.69%   |  89.43%   |  -0.26%   |
+| MobileNet-V2 |  71.90%   |  72.21%   |  +0.31%   |  90.56%   |  90.62%   |  +0.06%   |
+| ResNet101    |  77.50%   |  77.60%   |  +0.10%   |  93.58%   |  93.55%   |  -0.03%   |
+| ResNet50     |  76.63%   |  76.50%   |  -0.13%   |  93.10%   |  92.98%   |  -0.12%   |
+| VGG16        |  72.08%   |  71.74%   |  -0.34%   |  90.63%   |  89.71%   |  -0.92%   |
+| VGG19        |  72.57%   |  72.12%   |  -0.45%   |  90.84%   |  90.15%   |  -0.69%   |
 
-|     Model    | FP32 (images/s) | INT8 (images/s) | Ratio (INT8/FP32) |
-|:------------:|:---------------:|:---------------:|:-----------------:|
-| MobileNet-V1 |      74.05      |      216.36     |        2.92       |
-| MobileNet-V2 |      88.60      |      205.84     |        2.32       |
-|   ResNet101  |       7.20      |      26.48      |        3.68       |
-|   ResNet50   |      13.23      |      50.02      |        3.78       |
-|     VGG16    |       3.47      |      10.67      |        3.07       |
-|     VGG19    |       2.83      |       9.09      |        3.21       |
+> **단일 스레드 성능 (images/sec)**
 
+|     모델     | FP32 | INT8 | 속도 향상 배율 |
+|:------------:|:----:|:----:|:--------------:|
+| MobileNet-V1 | 74.05 | 216.36 | 2.92x |
+| MobileNet-V2 | 88.60 | 205.84 | 2.32x |
+| ResNet101    |  7.20 |  26.48 | 3.68x |
+| ResNet50     | 13.23 |  50.02 | 3.78x |
+| VGG16        |  3.47 |  10.67 | 3.07x |
+| VGG19        |  2.83 |   9.09 | 3.21x |
 
-## 自然语言处理INT8模型 Ernie, GRU, LSTM 模型在 Xeon(R) 6271 上的性能和精度
+## Xeon(R) 6271에서 자연어처리 INT8 모델 성능 및 정확도 (Ernie, GRU, LSTM)
 
->**自然语言处理INT8模型 Ernie, GRU, LSTM 模型在 Xeon(R) 6271 上的性能**
+> **성능**
 
-|     Ernie Latency      | FP32 Latency (ms) | INT8 Latency (ms) | Ratio (FP32/INT8) |
-| :--------------: | :---------------: | :---------------: | :---------------: |
-|  Ernie 1 thread  |      237.21       |       79.26       |       2.99X       |
-| Ernie 20 threads |       22.08       |       12.57       |       1.76X       |
+| Ernie 레이턴시 | FP32 (ms) | INT8 (ms) | 향상 배율 |
+|----------------|-----------|-----------|------------|
+| 1 thread       | 237.21    | 79.26     | 2.99x      |
+| 20 threads     | 22.08     | 12.57     | 1.76x      |
 
-| GRU Performance (QPS)              | Naive FP32 | INT88 | Int8/Native FP32 |
-| ------------------------------ | ---------- | ----- | ---------------- |
-| GRU bs 1, thread 1             | 1108       | 1393  | 1.26             |
-| GRU repeat 1, bs 50, thread 1  | 2175       | 3199  | 1.47             |
-| GRU repeat 10, bs 50, thread 1 | 2165       | 3334  | 1.54             |
+| GRU 성능 (QPS)              | Naive FP32 | INT8  | 향상 배율 |
+|-----------------------------|------------|-------|------------|
+| bs=1, thread=1              | 1108       | 1393  | 1.26x      |
+| repeat=1, bs=50, thread=1   | 2175       | 3199  | 1.47x      |
+| repeat=10, bs=50, thread=1  | 2165       | 3334  | 1.54x      |
 
-| LSTM Performance (QPS) |  FP32   |  INT8   | INT8 /FP32 |
-| :---------------: | :-----: | :-----: | :--------: |
-|   LSTM 1 thread   | 4895.65 | 7190.55 |    1.47    |
-|  LSTM 4 threads   | 6370.86 | 7942.51 |    1.25    |
+| LSTM 성능 (QPS) | FP32    | INT8    | 향상 배율 |
+|----------------|---------|---------|------------|
+| 1 thread       | 4895.65 | 7190.55 | 1.47x      |
+| 4 threads      | 6370.86 | 7942.51 | 1.25x      |
 
+> **정확도**
 
->**自然语言处理INT8模型 Ernie, GRU, LSTM 模型在 Xeon(R) 6271 上的精度**
+| 모델   | FP32 정확도 | INT8 정확도 | 차이     |
+|--------|-------------|-------------|----------|
+| Ernie  | 80.20%      | 79.44%      | -0.76%   |
 
-|  Ernie   | FP32 Accuracy | INT8 Accuracy | Accuracy Diff |
-| :------: | :-----------: | :-----------: | :-----------: |
-| accuracy |    80.20%     |    79.44%     |    -0.76%     |
+| LAC (GRU) | FP32    | INT8    | 차이      |
+|-----------|---------|---------|-----------|
+| 정확도    | 0.89326 | 0.89323 | -0.00007  |
 
-| LAC (GRU) | FP32    | INT8    | Accuracy diff |
-| --------- | ------- | ------- | ------------- |
-| accuracy  | 0.89326 | 0.89323 | -0.00007      |
+| LSTM   | FP32  | INT8  |
+|--------|-------|-------|
+| HX_ACC | 0.933 | 0.925 |
+| CTC_ACC| 0.999 | 1.000 |
 
-|  LSTM   | FP32  | INT8  |
-| :-----: | :---: | :---: |
-| HX_ACC  | 0.933 | 0.925 |
-| CTC_ACC | 0.999 | 1.000 |
+**참고 링크:**
 
+- 이미지 분류 데모: [Intel CPU 양자화 이미지 분류 예제](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/mkldnn_quant)  
+- Ernie 데모: [ERNIE INT8 정밀도 및 성능 재현](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)  
+- LAC(GRU) 데모: [GRU INT8 재현](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/x86_gru_int8)  
+- LSTM 데모: [LSTM INT8 재현](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/python/x86_lstm_demo)
 
-**Note:**
-* 图像分类复现 demo 可参考 [Intel CPU量化部署图像分类模型](https://github.com/PaddlePaddle/PaddleSlim/tree/develop/demo/mkldnn_quant)
-* Ernie 复现 demo 可参考 [ERNIE QAT INT8 精度与性能复现](https://github.com/PaddlePaddle/benchmark/tree/master/Inference/c%2B%2B/ernie/mkldnn)
-* LAC (GRU) 复现 demo 可参考 [GRU INT8 精度与性能复现](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/x86_gru_int8)
-* LSTM 复现 demo 可参考 [LSTM INT8 精度与性能复现](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/python/x86_lstm_demo)
+## 3. PaddleSlim 양자화 모델 생성
 
-## 3 PaddleSlim 产出量化模型
+X86 CPU 추론 엔진은 PaddleSlim에서 다음 두 방법으로 생성된 모델을 지원합니다:
 
-X86 CPU预测端支持PaddleSlim量化训练方法和静态离线量化方法产出的量化模型。
+- 정적 오프라인 양자화
+- 양자화 훈련 (QAT)
 
-关于使用PaddleSlim产出量化模型，请参考文档：
-* [静态离线量化-快速开始](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/quant_post_static_tutorial.html)
-* [量化训练-快速开始](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/quant_aware_tutorial.html)
-* [目标检测模型量化](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/paddledetection_slim_quantization_tutorial.html)
-* [量化API文档](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/quantization_api.html)
+자세한 내용은 아래 문서 참조:
 
-在产出部署在X86 CPU预测端的模型时，需要注意：
-* 静态离线量化方法支持的量化OP有conv2d, depthwise_conv2d, mul和matmul，所以 `quant_post_static`的输入参数 `quantizable_op_type`可以是这四个op的组合。
-* 量化训练方法支持的量化OP有conv2d, depthwise_conv2d, mul和matmul，所以 `quant_aware` 输入配置config中的`quantize_op_types`可以是这四个op的组合。
+- [정적 오프라인 양자화 빠른 시작](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/quant_post_static_tutorial.html)
+- [양자화 훈련 빠른 시작](https://paddleslim.readthedocs.io/zh_CN/latest/quick_start/quant_aware_tutorial.html)
+- [객체 탐지 양자화 튜토리얼](https://paddleslim.readthedocs.io/zh_CN/latest/tutorials/paddledetection_slim_quantization_tutorial.html)
+- [양자화 API 문서](https://paddleslim.readthedocs.io/zh_CN/latest/api_cn/quantization_api.html)
 
+주의사항:
 
-## 4 转换量化模型
+- 정적 양자화(`quant_post_static`)는 `conv2d`, `depthwise_conv2d`, `mul`, `matmul` 연산자를 지원합니다.
+- 양자화 훈련(`quant_aware`) 또한 위 네 연산자들을 지원하며, 설정 시 `quantize_op_types`에 해당 op들을 명시하면 됩니다.
 
-在X86 CPU预测端上部署量化模型之前，需要对量化模型进行转换和优化操作。
+## 4. 양자화 모델 변환
 
-### 安装Paddle
+X86 CPU에서 양자화 모델을 추론 배포하기 전, PaddleSlim 모델을 최적화 및 변환해야 합니다.
 
-参考[Paddle官网](https://www.paddlepaddle.org.cn/)，安装Paddle最新CPU或者GPU版本。
+### Paddle 설치
 
-### 准备脚本
+[Paddle 공식 홈페이지](https://www.paddlepaddle.org.cn/)를 참고하여 최신 CPU 또는 GPU 버전을 설치합니다.
 
-下载[脚本](https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py)到本地.
+### 변환 스크립트 준비
+
+다음 스크립트를 다운로드합니다:
 
 ```
 wget https://github.com/PaddlePaddle/Paddle/blob/develop/python/paddle/fluid/contrib/slim/tests/save_quant_model.py
 ```
 
-save_quant_model.py脚本的参数说明：
-* quant_model_path: 为输入参数，必填。为PaddleSlim产出的量化模型。
-* int8_model_save_path: 量化模型转换后保存的路径。
+`save_quant_model.py` 스크립트의 파라미터 설명:
 
-### 转换量化模型
+- `quant_model_path`: 입력 파라미터로 필수 항목입니다. PaddleSlim에서 생성한 양자화 모델의 경로를 지정합니다.
+- `int8_model_save_path`: 변환된 INT8 양자화 모델을 저장할 경로입니다.
 
-使用脚本转化量化模型，比如：
+### 양자화 모델 변환
 
-```
+스크립트를 사용하여 양자화 모델을 변환하려면 예를 들어 다음과 같이 실행합니다:
+```bash
+
 python save_quant_model.py \
     --quant_model_path=/PATH/TO/SAVE/FLOAT32/QUANT/MODEL \
     --int8_model_save_path=/PATH/TO/SAVE/INT8/MODEL
 ```
 
-## 5 Paddle Inference 部署量化模型
+## 5. Paddle Inference로 양자화 모델 배포하기
 
-### 检查机器
+### 시스템 확인
 
-* 大家可以通过在命令行输入`lscpu`查看本机支持指令。
-* 在支持avx512_vnni的CPU服务器上，如：Casecade Lake, Model name: Intel(R) Xeon(R) Gold X2XX，INT8精度和性能最高，INT8性能提升为FP32模型的3~3.7倍。
-* 在支持avx512但是不支持avx512_vnni的CPU服务器上，如：SkyLake, Model name：Intel(R) Xeon(R) Gold X1XX，INT8性能为FP32性能的1.5倍左右。
-* 请确保机器支持完整的avx512指令集。
+- 터미널에서 `lscpu` 명령어를 입력하면 현재 시스템이 지원하는 명령어 집합을 확인할 수 있습니다.
+- `avx512_vnni`를 지원하는 CPU 서버(예: Cascade Lake, 모델명: Intel(R) Xeon(R) Gold X2XX)에서는 INT8 정밀도 및 성능이 가장 우수하며, INT8 모델은 FP32 모델 대비 **3~3.7배** 빠릅니다.
+- `avx512`는 지원하지만 `avx512_vnni`는 지원하지 않는 서버(예: SkyLake, 모델명: Intel(R) Xeon(R) Gold X1XX)에서는 INT8 성능이 FP32의 **약 1.5배** 수준입니다.
+- 시스템이 **avx512 전체 명령어 집합을 지원**하는지 반드시 확인하세요.
 
-### 预测部署
+### 추론 배포
 
-参考[X86 Linux上预测部署示例](../demo_tutorial/x86_linux_demo)和[X86 Windows上预测部署示例](../demo_tutorial/x86_windows_demo)，准备预测库，对模型进行部署。
+모델 배포를 위해 Paddle Inference 추론 라이브러리를 준비합니다.  
+다음 문서를 참고하여 X86 환경에서 추론을 구성할 수 있습니다:
 
-请注意，在X86 CPU预测端部署量化模型，必须开启MKLDNN和IrOptim。
+- [X86 Linux 환경 추론 배포 예제](../demo_tutorial/x86_linux_demo)  
+- [X86 Windows 환경 추론 배포 예제](../demo_tutorial/x86_windows_demo)
 
-C++ API举例如下。
+> ⚠️ 참고: X86 CPU에서 양자화 모델을 배포할 때는 반드시 **MKLDNN**과 **IrOptim**을 활성화해야 합니다.
+
+#### C++ API 예제:
+
+```cpp
+paddle_infer::Config config;
+config.SetModel("path/to/model_dir");  // 모델 경로 설정
+config.EnableMKLDNN();                 // MKL-DNN 활성화 (필수)
+config.SwitchIrOptim(true);           // IR 최적화 활성화 (필수)
+
+// 필요한 경우 INT8 연산자 명시
+// config.SetMkldnnCacheCapacity(10);
+// config.EnableMkldnnInt8();
+
+auto predictor = paddle_infer::CreatePredictor(config);  // 예측기 생성
 
 ```c++
 paddle_infer::Config config;
@@ -154,8 +178,7 @@ config.SetCpuMathLibraryNumThreads(FLAGS_threads);
 
 auto predictor = paddle_infer::CreatePredictor(config);
 ```
-
-Python API举例如下。
+Python API 예제:
 
 ```python
 if args.model_dir == "":
