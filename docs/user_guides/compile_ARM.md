@@ -1,142 +1,62 @@
-# **飞腾/鲲鹏下从源码编译**
+# **Feiteng/Kunpeng 환경에서 소스코드 컴파일**
 
-## 已验证模型列表
+## 검증된 모델 목록
 
 - resnet50
 - mobilenetv1
 - ernie
 - ELMo
 
-## 环境准备
+## 환경 준비
 
-* **处理器：FT2000+/Kunpeng 920 2426SK**
-* **操作系统：麒麟v10/UOS**
-* **Python 版本 2.7.15+/3.5.1+/3.6/3.7/3.8 (64 bit)**
-* **pip 或 pip3 版本 9.0.1+ (64 bit)**
+* **프로세서: FT2000+/Kunpeng 920 2426SK**
+* **운영체제: Kylin v10/UOS**
+* **Python 버전: 2.7.15+/3.5.1+/3.6/3.7/3.8 (64비트)**
+* **pip 또는 pip3 버전: 9.0.1+ (64비트)**
 
-飞腾FT2000+和鲲鹏920处理器均为ARMV8架构，在该架构上编译Paddle的方式一致，本文以FT2000+为例，介绍Paddle的源码编译。
+Feiteng FT2000+와 Kunpeng 920 프로세서는 모두 ARMV8 아키텍처로, 해당 아키텍처에서의 Paddle 컴파일 방식은 동일합니다. 본 문서는 FT2000+를 예시로 하여 Paddle의 소스코드 컴파일을 소개합니다.
 
-## 安装步骤
+## 설치 단계
 
-目前在FT2000+处理器加国产化操作系统（麒麟UOS）上安装Paddle，只支持源码编译的方式，接下来详细介绍各个步骤。
+현재 FT2000+ 프로세서 및 국산 운영체제(Kylin UOS)에서 Paddle을 설치하는 방법은 소스코드 컴파일 방식만 지원되며, 다음은 각 단계에 대한 상세 설명입니다.
 
-<a name="arm_source"></a>
-### **源码编译**
+### **소스코드 컴파일**
 
-1. Paddle依赖cmake进行编译构建，需要cmake版本>=3.10，如果操作系统提供的源包括了合适版本的cmake，直接安装即可，否则需要[源码安装](https://github.com/Kitware/CMake)
+1. Paddle은 cmake를 사용하여 컴파일하며, cmake 버전은 3.10 이상이 필요합니다. 운영체제가 적절한 버전의 cmake를 제공하는 경우 직접 설치 가능하며, 그렇지 않은 경우 [소스 설치](https://github.com/Kitware/CMake)를 참고하십시오.
 
-        ```
-        wget https://github.com/Kitware/CMake/releases/download/v3.16.8/cmake-3.16.8.tar.gz
-        tar -xzf cmake-3.16.8.tar.gz && cd cmake-3.16.8
-        ./bootstrap && make && sudo make install
-        ```
+2. Paddle 내부에서는 patchelf를 사용하여 동적 라이브러리의 rpath를 수정합니다. 운영체제에서 patchelf를 제공하는 경우 직접 설치 가능하며, 그렇지 않으면 [patchelf 공식 문서](https://github.com/NixOS/patchelf)를 참고하십시오. ARM 환경에서의 종속성 제거도 고려 중입니다.
 
-2. Paddle内部使用patchelf来修改动态库的rpath，如果操作系统提供的源包括了patchelf，直接安装即可，否则需要源码安装，请参考[patchelf官方文档](https://github.com/NixOS/patchelf)，后续会考虑在ARM上移出该依赖。
+3. [requirements.txt](https://github.com/PaddlePaddle/Paddle/blob/develop/python/requirements.txt)에 따라 Python 의존 라이브러리를 설치합니다. Feiteng 및 국산 운영체제 환경에서는 pip 설치가 실패하거나 제대로 작동하지 않을 수 있어, 소스 또는 시스템 패키지 설치 방식을 권장합니다.
 
-        ```
-        ./bootstrap.sh
-        ./configure
-        make
-        make check
-        sudo make install
-        ```
+4. Paddle 소스코드를 현재 디렉토리의 Paddle 폴더에 클론하고 해당 디렉토리로 이동합니다.
 
-3. 根据[requirments.txt](https://github.com/PaddlePaddle/Paddle/blob/develop/python/requirements.txt)安装Python依赖库，在飞腾加国产化操作系统环境中，pip安装可能失败或不能正常工作，主要依赖通过源或源码安装的方式安装依赖库，建议使用系统提供源的方式安装依赖库。
+5. 안정적인 release 브랜치로 전환합니다. 예: `git checkout release/2.0-rc1`
 
-4. 将Paddle的源代码克隆到当下目录下的Paddle文件夹中，并进入Paddle目录
+6. build 디렉토리를 만들고 이동합니다.
 
-    ```
-    git clone https://github.com/PaddlePaddle/Paddle.git
-    ```
+7. 파일 열기 제한으로 인해 컴파일 에러가 발생할 수 있어 최대 파일 열기 수를 설정합니다: `ulimit -n 4096`
 
-    ```
-    cd Paddle
-    ```
+8. cmake 실행 (자세한 컴파일 옵션은 [컴파일 옵션표](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/install/Tables.html#Compile) 참고)
 
-5. 切换到较稳定release分支下进行编译：
+9. 컴파일 명령 실행 시 `TARGET=ARMV8`을 반드시 추가해야 합니다.
 
-    ```
-    git checkout [分支名]
-    ```
+10. 컴파일 성공 후 `Paddle/build/python/dist` 디렉토리에서 `.whl` 패키지를 확인합니다.
 
-    例如：
+11. 현재 또는 대상 머신에 `.whl` 패키지를 설치합니다.
 
-    ```
-    git checkout release/2.0-rc1
-    ```
+## **설치 확인**
+`python` 또는 `python3`에서 `import paddle.fluid as fluid` 입력 후 `fluid.install_check.run_check()`를 실행하여 `Your Paddle Fluid is installed succesfully!` 메시지가 출력되면 설치가 완료된 것입니다.
 
-6. 并且请创建并进入一个叫build的目录下：
+resnet50, mobilenetv1 모델을 테스트할 수 있습니다.
 
-    ```
-    mkdir build && cd build
-    ```
-
-7. 链接过程中打开文件数较多，可能超过系统默认限制导致编译出错，设置进程允许打开的最大文件数：
-
-    ```
-    ulimit -n 4096
-    ```
-
-8. 执行cmake：
-
-    >具体编译选项含义请参见[编译选项表](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/install/Tables.html#Compile)
-
-    For Python2:
-    ```
-    cmake .. -DPY_VERSION=2 -DPYTHON_EXECUTABLE=`which python2` -DWITH_ARM=ON -DWITH_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DON_INFER=ON -DWITH_XBYAK=OFF
-    ```
-
-    For Python3:
-    ```
-    cmake .. -DPY_VERSION=3 -DPYTHON_EXECUTABLE=`which python3` -DWITH_ARM=ON -DWITH_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DON_INFER=ON -DWITH_XBYAK=OFF
-    ```
-
-9. 使用以下命令来编译，注意，因为处理器为ARM架构，如果不加`TARGET=ARMV8`则会在编译的时候报错。
-
-    ```
-    make TARGET=ARMV8 -j$(nproc)
-    ```
-
-10. 编译成功后进入`Paddle/build/python/dist`目录下找到生成的`.whl`包。
-
-11. 在当前机器或目标机器安装编译好的`.whl`包：
-
-    ```
-    pip install -U（whl包的名字）`或`pip3 install -U（whl包的名字）
-    ```
-
-恭喜，至此您已完成PaddlePaddle在FT环境下的编译安装。
-
-
-## **验证安装**
-安装完成后您可以使用 `python` 或 `python3` 进入python解释器，输入`import paddle.fluid as fluid` ，再输入
- `fluid.install_check.run_check()`
-
-如果出现`Your Paddle Fluid is installed succesfully!`，说明您已成功安装。
-
-在mobilenetv1和resnet50模型上测试
-
-    wget -O profile.tar https://paddle-cetc15.bj.bcebos.com/profile.tar?authorization=bce-auth-v1/4409a3f3dd76482ab77af112631f01e4/2020-10-09T10:11:53Z/-1/host/786789f3445f498c6a1fd4d9cd3897ac7233700df0c6ae2fd78079eba89bf3fb
-    tar xf profile.tar && cd profile
-    python resnet.py --model_file ResNet50_inference/model --params_file ResNet50_inference/params
-    # 正确输出应为：[0.0002414  0.00022418 0.00053661 0.00028639 0.00072682 0.000213
-    #              0.00638718 0.00128127 0.00013535 0.0007676 ]
-    python mobilenetv1.py --model_file mobilenetv1/model --params_file mobilenetv1/params
-    # 正确输出应为：[0.00123949 0.00100392 0.00109539 0.00112206 0.00101901 0.00088412
-    #              0.00121536 0.00107679 0.00106071 0.00099605]
-    python ernie.py --model_dir ernieL3H128_model/
-    # 正确输出应为：[0.49879393 0.5012061 ]
-
-## **如何卸载**
-请使用以下命令卸载PaddlePaddle：
+## **제거 방법**
+PaddlePaddle 제거는 다음 명령을 사용합니다:
 
 ```
-pip uninstall paddlepaddle` 或 `pip3 uninstall paddlepaddle
+pip uninstall paddlepaddle 또는 pip3 uninstall paddlepaddle
 ```
 
+## **비고**
+ARM 아키텍처에서 resnet50, mobilenetv1, ernie, ELMo 모델의 테스트를 완료하였으며, 예측에 필요한 연산자의 정확성을 기본적으로 보장합니다. 사용 중 오류 발생 시 [issue](https://github.com/PaddlePaddle/Paddle/issues)에 문의 바랍니다.
 
-## **备注**
-
-已在ARM架构下测试过resnet50, mobilenetv1, ernie， ELMo等模型，基本保证了预测使用算子的正确性，如果您在使用过程中遇到计算结果错误，编译失败等问题，请到[issue](https://github.com/PaddlePaddle/Paddle/issues)中留言，我们会及时解决。
-
-预测文档见[doc](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/guides/05_inference_deployment/inference/native_infer.html)，使用示例见[Paddle-Inference-Demo](https://github.com/PaddlePaddle/Paddle-Inference-Demo)
+예측 관련 문서는 [문서](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/guides/05_inference_deployment/inference/native_infer.html)를, 사용 예시는 [Paddle-Inference-Demo](https://github.com/PaddlePaddle/Paddle-Inference-Demo)를 참고하십시오.
