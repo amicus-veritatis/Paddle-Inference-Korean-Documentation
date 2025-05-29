@@ -170,6 +170,6 @@ python3 -m pip uninstall paddlepaddle
 MIPS 아키텍처 환경에서 resnet50, mobilenetv1, ernie, ELMo 모델로 테스트를 완료하였으며, 예측 관련 연산자의 정확성은 기본적으로 보장됩니다.
 사용 중 계산 오류나 빌드 실패 등의 문제가 발생할 경우, issue 페이지에 남겨주세요. 최대한 빠르게 대응하겠습니다.
 
-예측 관련 문서: Inference 문서 보기
+[doc](https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/guides/05_inference_deployment/inference/native_infer.html)
 
-예제 코드: Paddle-Inference-Demo
+[Paddle-Inference-Demo](https://github.com/PaddlePaddle/Paddle-Inference-Demo)
