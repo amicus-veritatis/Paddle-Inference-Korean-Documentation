@@ -157,12 +157,12 @@ python resnet.py --model_file ResNet50_inference/model --params_file ResNet50_in
 ```
 ```
 python mobilenetv1.py --model_file mobilenetv1/model --params_file mobilenetv1/params
-# 올바른 출력：[0.00123949 0.00100392 0.00109539 0.00112206 0.00101901 0.00088412
+# 예상 출력：[0.00123949 0.00100392 0.00109539 0.00112206 0.00101901 0.00088412
 #              0.00121536 0.00107679 0.00106071 0.00099605]
 ```
 ```
 python ernie.py --model_dir ernieL3H128_model/
-# 올바른 출력：[0.49879393 0.5012061 ]
+# 예상 출력：[0.49879393 0.5012061 ]
 ```
 ## **제거 방법**
 
