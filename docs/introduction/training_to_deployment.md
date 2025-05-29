@@ -1,12 +1,12 @@
-# 训练推理示例说明
+# 훈련 및 추론 예제 설명
 
-本文档将向您介绍如何使用 Paddle 2.0 新接口训练和推理一个模型。
+이 문서는 **Paddle 2.0의 새로운 인터페이스**를 사용해 모델을 훈련하고 추론하는 방법을 소개합니다.
 
-## 一、使用 Paddle 2.0 新接口训练一个简单模型
+## 1. Paddle 2.0 인터페이스로 간단한 모델 훈련
 
-我们参考[ LeNet 的 MNIST 数据集图像分类 ](https://www.paddlepaddle.org.cn/documentation/docs/zh/tutorial/cv_case/image_classification/image_classification.html#lenetmnist)，使用 Paddle 2.0 接口训练一个简单的模型，分别存储成预训练和预测部署模型。我们将着重介绍如何生成模型文件。
+[LeNet을 이용한 MNIST 이미지 분류 예제](https://www.paddlepaddle.org.cn/documentation/docs/zh/tutorial/cv_case/image_classification/image_classification.html#lenetmnist)를 참고하여, Paddle 2.0 인터페이스로 간단한 모델을 훈련하고, 훈련 모델을 저장합니다. 특히, 모델 파일을 생성하는 과정을 강조합니다.
 
-- 依赖包导入
+### - 필수 패키지 임포트
 
 ```
 import paddle
@@ -20,20 +20,20 @@ from paddle.jit import to_static
 from paddle.vision.transforms import ToTensor
 ```
 
-- 查看 Paddle 版本
+- Paddle 버전 확인
 
 ```
 print(paddle.__version__)
 ```
 
-- 数据集准备
+- 데이터셋 준비
 
 ```
 train_dataset = MNIST(mode='train', transform=ToTensor())
 test_dataset = MNIST(mode='test', transform=ToTensor())
 ```
 
-- 构建 LeNet 网络
+- LeNet 네트워크 구성
 
 ```
 class LeNet(paddle.nn.Layer):
@@ -63,7 +63,7 @@ class LeNet(paddle.nn.Layer):
         return x
 ```
 
-- 模型训练
+- 모델 훈련
 
 ```
 train_loader = paddle.io.DataLoader(train_dataset, batch_size=64, shuffle=True)
@@ -87,16 +87,17 @@ def train(model, optim):
 train(model, optim)
 ```
 
-- 存储训练模型（训练格式）：您可以参考[ 参数存储 ](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/02_paddle2.0_develop/08_model_save_load_cn.html#id8)，了解如何在动态图下存储训练格式的模型。只需调用`paddle.save`接口即可。
+- 훈련 모델 저장 (훈련용 포맷): 매개변수 저장을 참고하여, 동적 그래프(dygraph) 모드에서 훈련 포맷의 모델을 저장하는 방법을 확인할 수 있습니다. paddle.save 인터페이스만 호출하면 됩니다.
 
 ```
 paddle.save(model.state_dict(), 'lenet.pdparams')
 paddle.save(optim.state_dict(), "lenet.pdopt")
 ```
 
-## 二、预训练模型如何转换为预测部署模型
+## 2. 사전 훈련된 모델을 추론 배포용 모델로 변환하는 방법
 
-- 加载预训练模型：您可以参考[参数载入](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/02_paddle2.0_develop/08_model_save_load_cn.html#id9)了解如何在动态图下加载训练格式的模型，此方法可帮助您完成恢复训练，即模型状态回到训练中断的时刻，恢复训练之后的梯度更新走向是和恢复训练前的梯度走向完全相同的。只需调用`paddle.load`接口加载训练格式的模型，再调用`set_state_dict`接口恢复模型训练中断时刻的状态。
+- 사전 훈련 모델 불러오기: 매개변수 불러오기를 참고하면, 동적 그래프(dygraph) 모드에서 훈련 포맷의 모델을 로드하는 방법을 알 수 있습니다. 이 방법은 훈련 중단 시점으로 모델 상태를 복원하는 데 유용하며, 복원 후에도 훈련의 경로(gradient flow)가 그대로 이어집니다.
+paddle.load 인터페이스로 훈련 포맷 모델을 불러온 뒤, set_state_dict를 호출하여 훈련 중단 당시의 상태를 복원하면 됩니다.
 
 ```
 model_state_dict = paddle.load('lenet.pdparams')
@@ -105,14 +106,16 @@ model.set_state_dict(model_state_dict)
 optim.set_state_dict(opt_state_dict)
 ```
 
-- 存储为预测部署模型：实际部署时，您需要使用预测格式的模型，预测格式模型相对训练格式模型而言，在拓扑上进行了裁剪，去除了预测不需要的算子。您可以参考[InputSpec](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/04_dygraph_to_static/input_spec_cn.html)来完成动转静功能。只需InputSpec标记模型的输入，调用`paddle.jit.to_static`和`paddle.jit.save`即可得到预测格式的模型。
+- 추론 배포용 모델로 저장하기: 실제 서비스에 배포할 때는 추론용 포맷의 모델을 사용하는 것이 필요합니다. 이 추론 포맷의 모델은 훈련 포맷과 비교했을 때 그래프 구조가 간소화되어 있으며, 예측에 필요 없는 연산자(OP)들이 제거되어 있습니다.
+InputSpec 문서를 참고하여 동적 그래프(DyGraph)를 정적 그래프(Static Graph)로 변환할 수 있습니다.
+InputSpec으로 모델 입력을 지정한 후, paddle.jit.to_static과 paddle.jit.save를 호출하면 추론용 모델을 저장할 수 있습니다.
 
 ```
 net = to_static(model, input_spec=[InputSpec(shape=[None, 1, 28, 28], name='x')])
 paddle.jit.save(net, 'inference_model/lenet')
 ```
 
-### 参考代码
+### 참고 코드
 
 ```
 import paddle
@@ -219,7 +222,9 @@ if __name__ == '__main__':
     paddle.jit.save(net, 'inference_model/lenet')
 ```
 
-Paddle 2.0 默认保存的权重格式为 `*.pdiparams` 后缀的文件。若因特殊需求，希望沿用旧版本的分离权重方式，请参考以下示例进行另存为。Paddle 2.0 兼容支持这种旧格式推理部署模型的加载。
+Paddle 2.0은 기본적으로 *.pdiparams 확장자를 가진 통합된 형식의 가중치 파일로 모델을 저장합니다.
+하지만 특별한 요구 사항이 있어 이전 버전의 분리된 가중치 저장 방식을 사용하고자 한다면, 아래 예제를 참고하여 따로 저장할 수 있습니다.
+Paddle 2.0은 이러한 구형 분리 포맷의 추론 모델도 호환하여 불러올 수 있습니다.
 
 ```
 import paddle
@@ -246,121 +251,120 @@ if __name__ == '__main__':
 ```
 
 
-## 三、使用 Paddle 2.0 Python 接口预测部署
+## 3. Paddle 2.0 Python 인터페이스를 이용한 추론 배포
 
-我们使用存储好的预测部署模型，借助 Python 2.0 接口执行预测部署。
+저장된 추론용 모델을 사용하여, Python 2.0 인터페이스를 통해 추론을 수행합니다.
 
-### 加载预测模型并进行预测配置
+### 추론 모델 로드 및 설정 구성
 
-首先，我们加载预测模型，并配置预测时的一些选项，根据配置创建预测引擎：
+먼저, 추론 모델을 로드하고, 예측 시 사용할 몇 가지 설정을 구성합니다. 그런 다음 설정에 따라 추론 엔진을 생성합니다:
 
 ```python
-config = Config("inference_model/lenet/lenet.pdmodel", "inference_model/lenet/lenet.pdiparams") # 通过模型和参数文件路径加载
-config.disable_gpu() # 使用cpu预测
-predictor = create_predictor(config) # 根据预测配置创建预测引擎predictor
+config = Config("inference_model/lenet/lenet.pdmodel", "inference_model/lenet/lenet.pdiparams")  # 모델 및 파라미터 경로로 로드
+config.disable_gpu()  # CPU로 추론 수행
+predictor = create_predictor(config)  # 설정에 따라 예측 엔진 생성
 ```
-更多配置选项可以参考[官网文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/05_inference_deployment/inference/python_infer_cn.html#config)。
+더 많은 설정 옵션은 공식 문서를 참고하세요.
 
-### 设置输入
+### 입력 설정
 
-我们先通过获取输入Tensor的名称，再根据名称获取到输入Tensor的句柄。
+입력 Tensor의 이름을 가져오고, 해당 이름을 이용해 입력 핸들을 획득합니다.
 
 ```python
-# 获取输入变量名称
 input_names = predictor.get_input_names()
 input_handle = predictor.get_input_handle(input_names[0])
 ```
 
-下面我们准备输入数据，并将其拷贝至待预测的设备上。这里我们使用了随机数据，您在实际使用中可以将其换为需要预测的真实图片。
+다음으로 입력 데이터를 준비하고, 예측 장치(CPU)에 복사합니다. 여기서는 임의 데이터를 사용하지만, 실제 사용 시에는 실제 이미지 데이터를 사용할 수 있습니다.。
 
 ```python
-### 设置输入
 fake_input = np.random.randn(1, 1, 28, 28).astype("float32")
 input_handle.reshape([1, 1, 28, 28])
 input_handle.copy_from_cpu(fake_input)
 ```
 
-### 运行预测
+### 추론 실행
 
 ```python
 predictor.run()
 ```
 
-### 获取输出
+### 출력 획득
 
 ```python
-# 获取输出变量名称
 output_names = predictor.get_output_names()
 output_handle = predictor.get_output_handle(output_names[0])
 output_data = output_handle.copy_to_cpu()
 ```
-获取输出句柄的方式与输入类似，我们最后获取到的输出是numpy.ndarray类型，方便使用numpy对其进行后续的处理。
+입출력 핸들 설정 방식은 동일하며, 출력 결과는 numpy.ndarray 형식으로 획득되어 numpy를 사용해 후속 처리가 가능합니다.
 
-### 完整可运行代码
+### 전체 실행 가능한 코드
 ```python
 import numpy as np
 from paddle.inference import Config
 from paddle.inference import create_predictor
 
+# 모델 및 파라미터 경로 설정
 config = Config("inference_model/lenet/lenet.pdmodel", "inference_model/lenet/lenet.pdiparams")
-config.disable_gpu()
+config.disable_gpu()  # GPU 비활성화, CPU 사용
 
-# 创建PaddlePredictor
+# Paddle 예측기 생성
 predictor = create_predictor(config)
 
-# 获取输入的名称
+# 입력 이름 가져오기
 input_names = predictor.get_input_names()
 input_handle = predictor.get_input_handle(input_names[0])
 
-# 设置输入
+# 입력 설정 (임의의 테스트 데이터 사용)
 fake_input = np.random.randn(1, 1, 28, 28).astype("float32")
 input_handle.reshape([1, 1, 28, 28])
 input_handle.copy_from_cpu(fake_input)
 
-# 运行predictor
+# 예측 실행
 predictor.run()
 
-# 获取输出
+# 출력 이름 가져오기 및 출력값 복사
 output_names = predictor.get_output_names()
 output_handle = predictor.get_output_handle(output_names[0])
-output_data = output_handle.copy_to_cpu() # numpy.ndarray类型
+output_data = output_handle.copy_to_cpu()  # numpy.ndarray 타입
 
 print(output_data)
+
 ```
 
-## 四、使用 Paddle 2.0 C++ 接口预测部署
+## 4. Paddle 2.0 C++ 인터페이스를 이용한 추론 배포
 
-我们将存储好的模型使用 Paddle 2.0 C++ 接口执行预测部署。
+저장해둔 모델을 Paddle 2.0의 C++ 인터페이스를 통해 추론 환경에 배포하고 실행하는 방법을 설명합니다.
 
-### 准备预测库
+### 추론 라이브러리 준비
 
-首先，我们需要Paddle Inference预测库用于模型推理部署。这里下载2.0.0版本的用于x86 cpu的预测库：
+먼저, 모델 추론을 위한 Paddle Inference 라이브러리를 다운로드해야 합니다.  
+다음 명령어를 사용해 x86 CPU용 Paddle Inference 2.0.0 버전을 다운로드합니다:
 
 ```shell
 wget https://paddle-inference-lib.bj.bcebos.com/2.0.0-cpu-avx-mkl/paddle_inference.tgz
 ```
 
-### 下载预测样例包
-
-下载预测样例代码包：
+### 추론 예제 코드 다운로드
+예제 코드를 포함한 패키지를 다운로드합니다:
 
 ```shell
 wget https://paddle-inference-dist.bj.bcebos.com/lenet_demo.tgz
 ```
 
-其中，`lenet_infer_test.cc`为预测脚本，`run.sh`为执行脚本。
+압축을 풀면 다음과 같은 파일이 포함되어 있습니다: lenet_infer_test.cc: 추론 실행 C++ 코드, run.sh: 빌드 및 실행 스크립트
+ 
+### 의존 라이브러리 경로 설정
 
-### 配置依赖库路径
-
-我们需要在执行脚本`run.sh`中，配置预测库的路径：
+run.sh 스크립트에서 추론 라이브러리의 경로를 지정해줘야 합니다. 예:
 
 ```shell
 LIB_DIR=/path/to/paddle_inference
 ```
 
-### 加载预测模型并进行预测配置
+### 모델 로드 및 예측 엔진 설정
 
-首先，我们加载预测模型，并配置预测时的一些选项，根据配置创建预测引擎：
+먼저 모델을 로드하고, 예측에 필요한 설정을 구성합니다. 아래는 C++ 코드 예시입니다:
 
 ```c++
 std::shared_ptr<Predictor> InitPredictor() {
@@ -374,33 +378,33 @@ std::shared_ptr<Predictor> InitPredictor() {
 }
 ```
 
-这里设置使用CPU来进行预测，更多配置选项可以参考[官网文档](https://www.paddlepaddle.org.cn/documentation/docs/zh/guides/05_inference_deployment/inference/native_infer.html#a-name-config-config-a)。
+더 많은 설정 항목은 공식 문서를 참고하세요.
 
-### 设置输入
+### 입력 설정
 
-我们先通过获取输入Tensor的名称，再根据名称获取到输入Tensor的句柄：
+입력 텐서의 이름을 가져오고 해당 입력 핸들을 이용해 데이터를 전달합니다:
 
 ```c++
-  std::vector<float> input(1 * 1 * 28 * 28, 0);
-  # 获取输入变量名称
-  auto input_names = predictor->GetInputNames();
-  auto input_t = predictor->GetInputHandle(input_names[0]);
-  input_t->Reshape(input_shape);
-  input_t->CopyFromCpu(input.data());
+std::vector<float> input(1 * 1 * 28 * 28, 0);  // 입력 데이터를 전부 0으로 초기화
+auto input_names = predictor->GetInputNames();
+auto input_t = predictor->GetInputHandle(input_names[0]);
+input_t->Reshape({1, 1, 28, 28});  // 입력 shape 설정
+input_t->CopyFromCpu(input.data());  // CPU 데이터 복사
+
 ```
 
-这里我们使用了全零数据，您在实际使用中可以将其换为需要预测的真实图片。
+여기에서는 모든 값이 0인 데이터를 사용했지만, 실제 사용 시에는 예측하고자 하는 실제 이미지 데이터로 대체할 수 있습니다.
 
-### 运行预测
+### 예측 실행
 
 ```c++
 predictor->Run();
 ```
 
-### 获取输出
+### 출력 가져오기
 
 ```c++
-# 获取输出变量名称
+# 출력 변수 이름 가져오기
   auto output_names = predictor->GetOutputNames();
   auto output_t = predictor->GetOutputHandle(output_names[0]);
   std::vector<int> output_shape = output_t->shape();
@@ -410,11 +414,11 @@ predictor->Run();
   out_data->resize(out_num);
   output_t->CopyToCpu(out_data->data());
 ```
-out_data即为所需输出，可以对其进行后续的分析和处理。
+out_data바로 원하는 출력 결과이며, 이후 분석 및 처리에 활용할 수 있습니다.
 
-### 执行预测
+### 추론 실행
 
-配置好之后，在预测样例文件目录下，使用下列命令编译、执行预测样例。
+구성이 완료되면, 추론 예제 파일이 있는 디렉터리에서 아래 명령어를 사용하여 예제를 컴파일하고 실행합니다.
 
 ```shell
 sh run.sh
