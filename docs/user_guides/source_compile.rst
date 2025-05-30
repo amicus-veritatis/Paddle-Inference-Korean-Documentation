@@ -1,61 +1,60 @@
-源码编译
+소스 코드 컴파일
 ========
 
-什么时候需要源码编译？
+언제 소스 코드 컴파일이 필요한가요?
 --------------
 
-深度学习的发展十分迅速，对科研或工程人员来说，可能会遇到一些需要自己开发op的场景，可以在python层面编写op，但如果对性能有严格要求的话则必须在C++层面开发op，对于这种情况，需要用户源码编译飞桨，使之生效。
-此外对于绝大多数使用C++将模型部署上线的工程人员来说，您可以直接通过飞桨官网下载已编译好的预测库，快捷开启飞桨使用之旅。`飞桨官网 <https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html>`_ 提供了多个不同环境下编译好的预测库。如果用户环境与官网提供环境不一致（如cuda 、cudnn、tensorrt版本不一致等），或对飞桨源代码有修改需求，或希望进行定制化构建，可查阅本文档自行源码编译得到预测库。
+딥러닝 기술은 매우 빠르게 발전하고 있으며, 연구자나 엔지니어들은 종종 사용자 정의 OP를 개발해야 하는 상황을 마주합니다. 이러한 경우 Python 레벨에서 OP를 작성할 수 있지만, 성능에 대한 요구가 높은 경우 C++ 레벨에서 개발해야 합니다. 이럴 때는 PaddlePaddle을 소스 코드로 직접 컴파일해야 적용할 수 있습니다.  
+또한 대부분의 C++ 환경에서 모델을 배포하는 사용자라면, 공식 웹사이트에서 사전 컴파일된 예측 라이브러리를 직접 다운로드하여 바로 사용할 수 있습니다. [`PaddlePaddle 공식 홈페이지 <https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/inference_deployment/inference/build_and_install_lib_cn.html>`_] 에는 다양한 환경에 맞춘 사전 컴파일된 예측 라이브러리가 제공되어 있습니다. 만약 사용자의 환경이 공식 사이트의 환경과 다르거나(CUDA, cuDNN, TensorRT 버전 차이 등), 소스 코드를 수정하거나 커스터마이징이 필요할 경우, 본 문서를 참고하여 소스 코드로 직접 컴파일하여 예측 라이브러리를 얻을 수 있습니다.
 
-编译原理
+컴파일 원리
 ---------
 
-**一：目标产物**
+**1: 최종 산출물**
 
-飞桨框架的源码编译包括源代码的编译和链接，最终生成的目标产物包括：
+PaddlePaddle 프레임워크의 소스 컴파일은 소스 코드의 컴파일과 링크를 포함하며, 최종 산출물은 다음과 같습니다:
 
- - 含有 C++ 接口的头文件及其二进制库：用于C++环境，将文件放到指定路径即可开启飞桨使用之旅。
- - Python Wheel 形式的安装包：用于Python环境，也就是说，前面讲的pip安装属于在线安装，这里属于本地安装。
+ - C++ 인터페이스를 포함한 헤더 파일과 바이너리 라이브러리: C++ 환경에서 사용 가능하며, 지정된 경로에 파일을 배치하면 바로 사용할 수 있습니다.
+ - Python Wheel 형식의 설치 패키지: Python 환경에서 사용. 앞서 설명한 pip 설치는 온라인 설치이며, 여기서는 로컬 설치 방식입니다.
 
-**二：基础概念**
+**2: 기본 개념**
 
-飞桨主要由C++语言编写，通过pybind工具提供了Python端的接口，飞桨的源码编译主要包括编译和链接两步。
-* 编译过程由编译器完成，编译器以编译单元（后缀名为 .cc 或 .cpp 的文本文件）为单位，将 C++ 语言 ASCII 源代码翻译为二进制形式的目标文件。一个工程通常由若干源码文件组织得到，所以编译完成后，将生成一组目标文件。
-* 链接过程使分离编译成为可能，由链接器完成。链接器按一定规则将分离的目标文件组合成一个能映射到内存的二进制程序文件，并解析引用。由于这个二进制文件通常包含源码中指定可被外部用户复用的函数接口，所以也被称作函数库。根据链接规则不同，链接可分为静态和动态链接。静态链接对目标文件进行归档；动态链接使用地址无关技术，将链接放到程序加载时进行。
-配合包含声明体的头文件（后缀名为 .h 或 .hpp），用户可以复用程序库中的代码开发应用。静态链接构建的应用程序可独立运行，而动态链接程序在加载运行时需到指定路径下搜寻其依赖的二进制库。
+PaddlePaddle은 주로 C++로 작성되어 있으며, pybind 도구를 통해 Python 인터페이스를 제공합니다. PaddlePaddle의 소스 컴파일은 주로 컴파일과 링크 두 단계로 이루어집니다.  
+* 컴파일 단계는 컴파일러가 수행하며, `.cc` 또는 `.cpp` 확장자의 파일 단위로 C++ 소스 코드를 바이너리 형태의 오브젝트 파일로 변환합니다. 일반적으로 여러 개의 소스 파일로 구성되기 때문에, 여러 오브젝트 파일이 생성됩니다.  
+* 링크 단계는 이러한 오브젝트 파일을 하나의 실행 가능한 바이너리 파일로 조합하며, 외부 참조도 해결합니다. 이 바이너리에는 외부에서 재사용 가능한 함수 인터페이스도 포함될 수 있어, 라이브러리라고도 부릅니다. 링크 방식에 따라 정적 링크와 동적 링크로 나뉘며, 정적 링크는 오브젝트 파일을 아카이브하는 방식이고, 동적 링크는 로딩 시에 링크를 수행합니다.  
+헤더 파일(`.h` 또는 `.hpp`)과 함께 사용하면 라이브러리 코드를 재사용하여 응용 프로그램을 개발할 수 있습니다. 정적 링크로 만들어진 프로그램은 독립 실행 가능하고, 동적 링크는 실행 시 지정된 경로에 있는 의존 라이브러리를 필요로 합니다.
 
-**三：编译方式**
+**3: 컴파일 방식**
 
-飞桨框架的设计原则之一是满足不同平台的可用性。然而，不同操作系统惯用的编译和链接器是不一样的，使用它们的命令也不一致。比如，Linux 一般使用 GNU 编译器套件（GCC），Windows 则使用 Microsoft Visual C++（MSVC）。为了统一编译脚本，飞桨使用了支持跨平台构建的 CMake，它可以输出上述编译器所需的各种 Makefile 或者 Project 文件。    
-为方便编译，框架对常用的CMake命令进行了封装，如仿照 Bazel工具封装了 cc_binary 和 cc_library ，分别用于可执行文件和库文件的产出等，对CMake感兴趣的同学可在 cmake/generic.cmake 中查看具体的实现逻辑。Paddle的CMake中集成了生成python wheel包的逻辑，对如何生成wheel包感兴趣的同学可参考 `相关文档 <https://packaging.python.org/tutorials/packaging-projects/>`_ 。
+PaddlePaddle은 다양한 플랫폼을 지원하는 것을 목표로 설계되었습니다. 그러나 각 운영 체제는 사용되는 컴파일러와 링크 방식이 다릅니다. 예를 들어, Linux는 일반적으로 GCC를 사용하고, Windows는 MSVC를 사용합니다. 이를 통일하기 위해 PaddlePaddle은 CMake를 사용하여 다양한 컴파일러에 필요한 Makefile 또는 프로젝트 파일을 생성합니다.  
+편리한 컴파일을 위해 CMake 명령어를 래핑하여 `cc_binary`, `cc_library` 등의 인터페이스를 제공하며, 이는 Bazel의 구조를 참조한 것입니다. 자세한 구현은 `cmake/generic.cmake`에서 확인할 수 있습니다. 또한 Python Wheel 패키지를 생성하는 로직도 CMake에 통합되어 있으며, 이에 대한 내용은 [`패키징 가이드 <https://packaging.python.org/tutorials/packaging-projects/>`] 를 참고하시기 바랍니다.
 
-
-编译步骤
+컴파일 단계
 -----------
 
-飞桨分为 CPU 版本和 GPU 版本。如果您的计算机没有 Nvidia GPU，请选择 CPU 版本构建安装。如果您的计算机含有 Nvidia GPU 且预装有 CUDA / CuDNN，也可选择 GPU 版本构建安装。
+PaddlePaddle은 CPU 버전과 GPU 버전으로 나뉩니다. 사용자의 컴퓨터에 Nvidia GPU가 없다면 CPU 버전으로 설치하세요. 만약 CUDA / CuDNN이 설치된 Nvidia GPU가 있다면 GPU 버전으로 설치할 수 있습니다.
 
-**推荐配置及依赖项**
+**권장 사양 및 의존 항목**
 
-1、稳定的 Github 连接，主频 1 GHz 以上的多核处理器，9 GB 以上磁盘空间。  
-2、GCC 版本 4.8 或者 8.2；或者 Visual Studio 2015 Update 3。  
-3、Python 版本 2.7 或 3.5 以上，pip 版本 9.0 及以上；CMake v3.10 及以上；Git 版本 2.17 及以上。请将可执行文件放入系统环境变量中以方便运行。  
-4、GPU 版本额外需要 Nvidia CUDA 9 / 10，CuDNN v7 及以上版本。根据需要还可能依赖 TensorRT。  
+1. 안정적인 GitHub 연결, 1GHz 이상의 멀티코어 CPU, 9GB 이상의 디스크 공간  
+2. GCC 4.8 또는 8.2 버전, 또는 Visual Studio 2015 Update 3  
+3. Python 2.7 또는 3.5 이상, pip 9.0 이상, CMake 3.10 이상, Git 2.17 이상 (실행 편의를 위해 환경 변수에 등록)  
+4. GPU 버전은 추가로 Nvidia CUDA 9/10, CuDNN v7 이상 필요 (필요 시 TensorRT도 필요)
 
-
-基于 Ubuntu 18.04
+Ubuntu 18.04 기반
 ------------
 
-**一：环境准备**
+**1: 환경 준비**
 
-除了本节开头提到的依赖，在 Ubuntu 上进行飞桨的源码编译，您还需要准备 GCC8 编译器等工具，可使用下列命令安装：
+위에서 언급한 의존 항목 외에 Ubuntu에서는 GCC8 컴파일러 등 도구도 필요합니다. 아래 명령어로 설치할 수 있습니다:
 
 .. code:: shell
 
 	sudo apt-get install gcc g++ make cmake git vim unrar python3 python3-dev python3-pip swig wget patchelf libopencv-dev
 	pip3 install numpy protobuf wheel setuptools
 
-若需启用 cuda 加速，需准备 cuda、cudnn。上述工具的安装请参考 nvidia 官网，以 cuda10.1，cudnn7.6 为例配置 cuda 环境。
+
+CUDA 가속을 원한다면 CUDA와 cuDNN 환경을 구축해야 합니다. 아래는 CUDA 10.1, cuDNN 7.6 기준 설정 예입니다:
 
 .. code:: shell
 
@@ -69,110 +68,105 @@
 	sudo cp -a cuda/include/cudnn.h /usr/local/cuda/include/
 	sudo cp -a cuda/lib64/libcudnn* /usr/local/cuda/lib64/
 
+Ubuntu 18.04에서는 기본적으로 열 수 있는 파일 수가 1024로 제한되어 있어 컴파일 시 문제 발생 가능성이 있습니다.
 
-**编译飞桨过程中可能会打开很多文件，Ubuntu 18.04 默认设置最多同时打开的文件数是1024（参见 ulimit -a），需要更改这个设定值。** 
-
-
-在 /etc/security/limits.conf 文件中添加两行。
+/etc/security/limits.conf 파일에 다음 줄을 추가하세요:
 
 .. code:: shell
  
 	* hard noopen 102400
 	* soft noopen 102400
 
-重启计算机，重启后执行以下指令，请将${user}切换成当前用户名。
+컴퓨터 재부팅 후 다음 명령어로 현재 사용자로 재진입하여 설정을 적용하세요 (${user} 자리에 사용자명 입력):
 
 .. code:: shell
 
 	su ${user}
 	ulimit -n 102400
 
-若在 TensorRT 依赖编译过程中出现头文件虚析构函数报错，请在 NvInfer.h 文件中为 class IPluginFactory 和 class IGpuAllocator 分别添加虚析构函数：
+TensorRT를 사용하는 경우, 가상 소멸자 오류가 발생할 수 있으니 NvInfer.h 파일의 IPluginFactory, IGpuAllocator 클래스에 가상 소멸자를 추가해야 합니다:
 
 .. code-block:: c++
 
 	virtual ~IPluginFactory() {};
 	virtual ~IGpuAllocator() {};
 
+2: 컴파일 명령어
 
-**二：编译命令**
-
-使用 Git 将飞桨代码克隆到本地，并进入目录，切换到稳定版本（git tag显示的标签名，如 release/2.0）。  
-**飞桨使用 develop 分支进行最新特性的开发，使用 release 分支发布稳定版本。在 GitHub 的 Releases 选项卡中，可以看到飞桨版本的发布记录。**  
+PaddlePaddle 코드를 Git으로 클론하고 안정 버전으로 전환합니다 (예: release/2.0).
+develop 브랜치는 최신 기능 개발용이며, release 브랜치는 안정 버전입니다. GitHub의 Releases에서 버전 기록을 확인하세요.
 
 .. code:: shell
 
 	git clone https://github.com/PaddlePaddle/Paddle.git
 	cd Paddle
-	git checkout release/2.0    
+	git checkout release/2.0  
 
-下面以 GPU 版本为例说明编译命令。其他环境可以参考“CMake编译选项表”修改对应的cmake选项。比如，若编译 CPU 版本，请将 WITH_GPU 设置为 OFF。
-
+아래는 GPU 버전 예시입니다. CPU 버전은 WITH_GPU=OFF로 설정하세요.
 
 .. code:: shell
 
-	# 创建并进入 build 目录
+	# build 디렉토리 생성
 	mkdir build_cuda && cd build_cuda
-	# 执行cmake指令
+	# cmake 실행
 	cmake .. -DPY_VERSION=3 \
 		-DWITH_TESTING=OFF \
 		-DWITH_MKL=ON \
 		-DWITH_GPU=ON \
 		-DON_INFER=ON \
 		..
-		
-**使用make编译**
+
+**make로 컴파일**
 
 make -j4
 
-**编译成功后可在dist目录找到生成的.whl包**
+**Wheel 패키지 설치 (dist 디렉토리에서)**
 
 pip3 install python/dist/paddlepaddle-2.0.0-cp38-cp38-linux_x86_64.whl
 
-**预测库编译**
+**예측 라이브러리 컴파일**
 
 make inference_lib_dist -j4
 
+**cmake 컴파일 환경 표**
 
-**cmake编译环境表**
-
-以下介绍的编译方法都是通用步骤，根据环境对应修改cmake选项即可。
+다음은 공통된 cmake 빌드 방법으로, 환경에 따라 cmake 옵션을 수정하면 됩니다.
 
 ================  ============================================================================  =============================================================
-      选项                                            说明                                                                 默认值
+      옵션                                             설명                                                                  기본값
 ================  ============================================================================  =============================================================
-WITH_GPU          是否支持GPU                                                                   ON
-WITH_AVX          是否编译含有AVX指令集的飞桨二进制文件                                         ON
-WITH_PYTHON       是否内嵌PYTHON解释器并编译Wheel安装包                                         ON
-WITH_TESTING      是否开启单元测试                                                              OFF
-WITH_MKL          是否使用MKL数学库，如果为否，将使用OpenBLAS                                   ON
-WITH_SYSTEM_BLAS  是否使用系统自带的BLAS                                                        OFF
-WITH_DISTRIBUTE   是否编译带有分布式的版本                                                      OFF
-WITH_BRPC_RDMA    是否使用BRPC,RDMA作为RPC协议                                                  OFF
-ON_INFER          是否打开预测优化                                                              OFF
-CUDA_ARCH_NAME    是否只针对当前CUDA架构编译                                                    All:编译所有可支持的CUDA架构；Auto:自动识别当前环境的架构编译
-WITH_TENSORRT     是否开启 TensorRT                                                          OFF
-TENSORRT_ROOT     TensorRT_lib的路径，该路径指定后会编译TRT子图功能eg:/paddle/nvidia/TensorRT/  /usr
+WITH_GPU          GPU를 지원할지 여부                                                                 ON
+WITH_AVX          AVX 명령어 집합이 포함된 Paddle 바이너리를 컴파일할지 여부                        ON
+WITH_PYTHON       PYTHON 인터프리터를 내장하고 Wheel 설치 패키지를 컴파일할지 여부                 ON
+WITH_TESTING      유닛 테스트를 활성화할지 여부                                                      OFF
+WITH_MKL          MKL 수학 라이브러리를 사용할지 여부 (아니면 OpenBLAS 사용)                         ON
+WITH_SYSTEM_BLAS  시스템 기본 BLAS를 사용할지 여부                                                   OFF
+WITH_DISTRIBUTE   분산 버전으로 컴파일할지 여부                                                       OFF
+WITH_BRPC_RDMA    BRPC 및 RDMA를 RPC 프로토콜로 사용할지 여부                                        OFF
+ON_INFER          추론 최적화를 활성화할지 여부                                                      OFF
+CUDA_ARCH_NAME    현재 CUDA 아키텍처만 대상으로 컴파일할지 여부                                     All: 지원 가능한 모든 CUDA 아키텍처 컴파일; Auto: 현재 환경 자동 인식
+WITH_TENSORRT     TensorRT를 활성화할지 여부                                                         OFF
+TENSORRT_ROOT     TensorRT 라이브러리 경로, 지정하면 TRT 서브그래프 기능을 컴파일함 예: /paddle/nvidia/TensorRT/  /usr
 ================  ============================================================================  =============================================================
 
-**三：NVIDIA Jetson嵌入式硬件预测库源码编译**
+**三：NVIDIA Jetson 임베디드 하드웨어 추론 라이브러리 소스 코드 컴파일**
 
-NVIDIA Jetson是NVIDIA推出的嵌入式AI平台，Paddle Inference支持在 NVIDIA Jetson平台上编译预测库。具体步骤如下：
+NVIDIA Jetson은 NVIDIA에서 출시한 임베디드 AI 플랫폼이며, Paddle Inference는 NVIDIA Jetson 플랫폼에서 추론 라이브러리를 컴파일하는 것을 지원합니다. 구체적인 단계는 다음과 같습니다:
 
-1、准备环境：
+1、환경 준비:
 
 .. code:: shell
 
-	# 开启硬件性能模式
+	# 하드웨어 성능 모드 활성화
 	sudo nvpmodel -m 0 && sudo jetson_clocks
-	# 增加 DDR 可用空间，Xavier 默认内存为 16 GB，所以内存足够，如在 Nano 上尝试，请执行如下操作。
+	# DDR 사용 가능 공간 증가. Xavier는 기본 메모리가 16 GB이므로 충분하지만, Nano에서는 다음 작업을 수행하세요.
 	sudo fallocate -l 5G /var/swapfile
 	sudo chmod 600 /var/swapfile
 	sudo mkswap /var/swapfile
 	sudo swapon /var/swapfile
 	sudo bash -c 'echo "/var/swapfile swap swap defaults 0 0" >> /etc/fstab'
 
-2、编译预测库：
+2、추론 라이브러리 컴파일:
 
 .. code:: shell
 
@@ -191,29 +185,29 @@ NVIDIA Jetson是NVIDIA推出的嵌入式AI平台，Paddle Inference支持在 NVI
 	-DWITH_NV_JETSON=ON
 	make -j4
 	
-	# 生成预测lib
+	# 추론 lib 생성
 	make inference_lib_dist -j4
 
-3、参照 `官网样例 <https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/performance_improving/inference_improving/paddle_tensorrt_infer.html#id2>`_ 进行测试。
+3、`공식 예제 <https://www.paddlepaddle.org.cn/documentation/docs/zh/advanced_guide/performance_improving/inference_improving/paddle_tensorrt_infer.html#id2>`_ 를 참고하여 테스트하세요.
 
 
-基于 Windows 10 
+Windows 10 기반
 -------------------
 
-**一：环境准备**
+**1: 환경 준비**
 
-除了本节开头提到的依赖，在 Windows 10 上编译飞桨，您还需要准备 Visual Studio 2015 Update 3。飞桨正在对更高版本的编译支持做完善支持。
+이 절 앞에서 언급한 의존성 외에도, Windows 10에서 Paddle을 컴파일하려면 Visual Studio 2015 Update 3이 필요합니다. Paddle은 더 높은 버전에 대한 컴파일 지원을 지속적으로 개선하고 있습니다.
 
-在命令提示符输入下列命令，安装必需的 Python 组件。
+명령 프롬프트에 다음 명령어를 입력하여 필요한 Python 패키지를 설치하세요:
 
 .. code:: shell
 
 	pip3 install numpy protobuf wheel 
 
-**二：编译命令**
+**2: 컴파일 명령어**
  
-使用 Git 将飞桨代码克隆到本地，并进入目录，切换到稳定版本（git tag显示的标签名，如 release/2.0）。  
-**飞桨使用 develop 分支进行最新特性的开发，使用 release 分支发布稳定版本。在 GitHub 的 Releases 选项卡中，可以看到飞桨版本的发布记录。**  
+Git을 사용하여 Paddle 코드를 로컬로 클론하고 디렉터리에 들어가서 안정된 버전으로 전환합니다(git tag로 표시된 태그 이름, 예: release/2.0).  
+**Paddle은 최신 기능 개발을 위해 develop 브랜치를 사용하고, 안정 버전은 release 브랜치에서 릴리스합니다. GitHub의 Releases 탭에서 Paddle 버전 릴리스 내역을 확인할 수 있습니다.**
 
 .. code:: shell
 
@@ -221,7 +215,7 @@ NVIDIA Jetson是NVIDIA推出的嵌入式AI平台，Paddle Inference支持在 NVI
 	cd Paddle
 	git checkout release/2.0
 	
-创建一个构建目录，并在其中执行 CMake，生成解决方案文件 Solution File，以编译 CPU 版本为例说明编译命令，其他环境可以参考“CMake编译选项表”修改对应的cmake选项。
+빌드 디렉터리를 만들고 그 안에서 CMake를 실행하여 솔루션 파일(Solution File)을 생성합니다. 아래는 CPU 버전 컴파일 예시이며, 다른 환경은 "CMake 컴파일 옵션 표"를 참고하여 cmake 옵션을 수정하세요.
 
 .. code:: shell
 
@@ -230,38 +224,39 @@ NVIDIA Jetson是NVIDIA推出的嵌入式AI平台，Paddle Inference支持在 NVI
 	cmake .. -G "Visual Studio 14 2015 Win64" -A x64 -DWITH_GPU=OFF -DWITH_TESTING=OFF -DON_INFER=ON 
 		-DCMAKE_BUILD_TYPE=Release -DPY_VERSION=3
 
-使用 Visual Studio 打开解决方案文件，在窗口顶端的构建配置菜单中选择 Release x64，单击生成解决方案，等待构建完毕即可。  
+Visual Studio로 솔루션 파일을 열고, 상단의 빌드 구성 메뉴에서 Release x64를 선택한 뒤 "솔루션 빌드"를 클릭해 빌드를 완료하세요.  
 
-**cmake编译环境表**
+**cmake 컴파일 환경 표**
 
 ================  ============================================================================  =============================================================
-      选项                                            说明                                                                 默认值
+      옵션                                             설명                                                                  기본값
 ================  ============================================================================  =============================================================
-WITH_GPU          是否支持GPU                                                                   ON
-WITH_AVX          是否编译含有AVX指令集的飞桨二进制文件                                         ON
-WITH_PYTHON       是否内嵌PYTHON解释器并编译Wheel安装包                                         ON
-WITH_TESTING      是否开启单元测试                                                              OFF
-WITH_MKL          是否使用MKL数学库，如果为否，将使用OpenBLAS                                   ON
-WITH_SYSTEM_BLAS  是否使用系统自带的BLAS                                                        OFF
-WITH_DISTRIBUTE   是否编译带有分布式的版本                                                      OFF
-WITH_BRPC_RDMA    是否使用BRPC,RDMA作为RPC协议                                                  OFF
-ON_INFER          是否打开预测优化                                                              OFF
-CUDA_ARCH_NAME    是否只针对当前CUDA架构编译                                                    All:编译所有可支持的CUDA架构；Auto:自动识别当前环境的架构编译
-WITH_TENSORRT     是否开启 TensorRT                                                          OFF
-TENSORRT_ROOT     TensorRT_lib的路径，该路径指定后会编译TRT子图功能eg:/paddle/nvidia/TensorRT/  /usr
+WITH_GPU          GPU를 지원할지 여부                                                                 ON
+WITH_AVX          AVX 명령어 집합이 포함된 Paddle 바이너리를 컴파일할지 여부                        ON
+WITH_PYTHON       PYTHON 인터프리터를 내장하고 Wheel 설치 패키지를 컴파일할지 여부                 ON
+WITH_TESTING      유닛 테스트를 활성화할지 여부                                                      OFF
+WITH_MKL          MKL 수학 라이브러리를 사용할지 여부 (아니면 OpenBLAS 사용)                         ON
+WITH_SYSTEM_BLAS  시스템 기본 BLAS를 사용할지 여부                                                   OFF
+WITH_DISTRIBUTE   분산 버전으로 컴파일할지 여부                                                       OFF
+WITH_BRPC_RDMA    BRPC 및 RDMA를 RPC 프로토콜로 사용할지 여부                                        OFF
+ON_INFER          추론 최적화를 활성화할지 여부                                                      OFF
+CUDA_ARCH_NAME    현재 CUDA 아키텍처만 대상으로 컴파일할지 여부                                     All: 지원 가능한 모든 CUDA 아키텍처 컴파일; Auto: 현재 환경 자동 인식
+WITH_TENSORRT     TensorRT를 활성화할지 여부                                                         OFF
+TENSORRT_ROOT     TensorRT 라이브러리 경로. 지정하면 TRT 서브그래프 기능을 컴파일함 예: /paddle/nvidia/TensorRT/  /usr
 ================  ============================================================================  =============================================================
 
-**结果验证**
+**결과 확인**
 
-**一：python whl包**
+**1: Python whl 패키지**
 
-编译完毕后，会在 python/dist 目录下生成一个 Python Wheel 安装包，安装测试的命令为：  
+컴파일이 완료되면, `python/dist` 디렉터리에 Python Wheel 설치 패키지가 생성됩니다. 설치 및 테스트 명령은 다음과 같습니다:
 
 .. code:: shell
 
 	pip3 install paddlepaddle-2.0.0-cp38-cp38-win_amd64.whl  
 
-安装完成后，可以使用 python3 进入python解释器，输入以下指令，出现 `Your Paddle Fluid is installed successfully! ` ，说明安装成功。
+설치가 완료되면, python3로 파이썬 인터프리터에 진입하여 아래 명령어를 입력합니다.  
+`Your Paddle Fluid is installed successfully!` 문구가 출력되면 설치에 성공한 것입니다.
 
 .. code:: python
 
@@ -269,9 +264,10 @@ TENSORRT_ROOT     TensorRT_lib的路径，该路径指定后会编译TRT子图�
 	fluid.install_check.run_check()
 
 
-**二：c++ lib**
+**2: C++ 라이브러리**
 
-预测库编译后，所有产出均位于build目录下的paddle_inference_install_dir目录内，目录结构如下。version.txt 中记录了该预测库的版本信息，包括Git Commit ID、使用OpenBlas或MKL数学库、CUDA/CUDNN版本号。
+추론 라이브러리 컴파일 후, 모든 출력물은 `build` 디렉터리 내 `paddle_inference_install_dir` 폴더에 생성됩니다.  
+`version.txt` 파일에는 해당 추론 라이브러리의 버전 정보(Git Commit ID, OpenBLAS 또는 MKL 수학 라이브러리 사용 여부, CUDA/CUDNN 버전 등)가 기록되어 있습니다.
 
 .. code:: shell
 
@@ -305,28 +301,28 @@ TENSORRT_ROOT     TensorRT_lib的路径，该路径指定后会编译TRT子图�
 	│       └── zlib
 	└── version.txt
 
+`include` 디렉터리에는 Paddle 추론 라이브러리를 사용할 때 필요한 헤더 파일이 포함되어 있고, `lib` 디렉터리에는 생성된 정적/동적 라이브러리가 포함되어 있으며, `third_party` 디렉터리에는 추론 라이브러리가 의존하는 외부 라이브러리들이 포함되어 있습니다.
 
-Include目录下包括了使用飞桨预测库需要的头文件，lib目录下包括了生成的静态库和动态库，third_party目录下包括了预测库依赖的其它库文件。
+응용 프로그램 코드를 작성하여 이 추론 라이브러리와 함께 컴파일 및 결과 테스트를 할 수 있습니다.  
+자세한 내용은 [`C++ 추론 라이브러리 API 사용법 <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/guides/05_inference_deployment/inference/native_infer.html>`_] 문서를 참고하세요.
 
-您可以编写应用代码，与预测库联合编译并测试结果。请参考 `C++ 预测库 API 使用 <https://www.paddlepaddle.org.cn/documentation/docs/zh/develop/guides/05_inference_deployment/inference/native_infer.html>`_ 一节。
-
-
-基于 MacOSX 10.14
+기반: MacOSX 10.14
 ------------
 
-**一：环境准备**
+**1: 환경 준비**
 
-在编译 Paddle 前，需要在 MacOSX 预装 Apple Clang 11.0 和 Python 3.8，以及 python-pip。请使用下列命令安装 Paddle 编译必需的 Python 组件包。
+Paddle을 컴파일하기 전에, MacOSX에 Apple Clang 11.0과 Python 3.8, 그리고 python-pip이 사전 설치되어 있어야 합니다.  
+다음 명령어를 사용해 Paddle 컴파일에 필요한 Python 패키지를 설치하세요.
 
 .. code:: shell
 
 	pip3 install numpy protobuf wheel setuptools
 
 
-**二：编译命令**
+**2: 컴파일 명령어**
 
-使用 Git 将飞桨代码克隆到本地，并进入目录，切换到稳定版本（git tag显示的标签名，如 release/2.0）。  
-**飞桨使用 develop 分支进行最新特性的开发，使用 release 分支发布稳定版本。在 GitHub 的 Releases 选项卡中，可以看到飞桨版本的发布记录。**  
+Git을 사용하여 Paddle 소스를 로컬에 클론하고, 디렉터리로 이동한 후, 안정적인 릴리스 버전으로 전환합니다 (git tag로 표시되는 태그명, 예: release/2.0).  
+**Paddle은 최신 기능 개발을 위해 develop 브랜치를 사용하며, 안정 버전 배포는 release 브랜치를 통해 진행됩니다. GitHub의 Releases 탭에서 Paddle 버전 기록을 확인할 수 있습니다.**
 
 .. code:: shell
 
@@ -334,49 +330,49 @@ Include目录下包括了使用飞桨预测库需要的头文件，lib目录下�
 	cd Paddle
 	git checkout release/2.0    
 
-下面以 CPU-MKL 版本为例说明编译命令。
+다음은 CPU-MKL 버전을 예로 든 컴파일 명령어입니다.
 
 .. code:: shell
 
-	# 创建并进入 build 目录
+	# build 디렉터리 생성 및 진입
 	mkdir build && cd build
-	# 执行cmake指令
+	# cmake 명령 실행
 	cmake .. -DPY_VERSION=3 \
 		-DWITH_TESTING=OFF \
 		-DWITH_MKL=ON \
 		-DON_INFER=ON \
 		..
-		
-**使用make编译**
+
+**make를 사용한 컴파일**
 
 make -j4
 
-**编译成功后可在dist目录找到生成的.whl包**
+**컴파일이 성공하면 dist 디렉터리에서 생성된 .whl 패키지를 확인할 수 있습니다**
 
 pip3 install python/dist/paddlepaddle-2.0.0-cp38-cp38-macosx_10_14_x86_64.whl
 
-**预测库编译**
+**추론 라이브러리 컴파일**
 
 make inference_lib_dist -j4
 
 
-**cmake编译环境表**
+**cmake 컴파일 환경표**
 
-以下介绍的编译方法都是通用步骤，根据环境对应修改cmake选项即可。
+다음은 공통적으로 사용되는 컴파일 설정 옵션입니다. 환경에 따라 해당 cmake 옵션을 조정하세요.
 
 ================  ============================================================================  =============================================================
-      选项                                            说明                                                                 默认值
+      옵션                                            설명                                                                 기본값
 ================  ============================================================================  =============================================================
-WITH_GPU          是否支持GPU                                                                   ON
-WITH_AVX          是否编译含有AVX指令集的飞桨二进制文件                                         ON
-WITH_PYTHON       是否内嵌PYTHON解释器并编译Wheel安装包                                         ON
-WITH_TESTING      是否开启单元测试                                                              OFF
-WITH_MKL          是否使用MKL数学库，如果为否，将使用OpenBLAS                                   ON
-WITH_SYSTEM_BLAS  是否使用系统自带的BLAS                                                        OFF
-WITH_DISTRIBUTE   是否编译带有分布式的版本                                                      OFF
-WITH_BRPC_RDMA    是否使用BRPC,RDMA作为RPC协议                                                  OFF
-ON_INFER          是否打开预测优化                                                              OFF
-CUDA_ARCH_NAME    是否只针对当前CUDA架构编译                                                    All:编译所有可支持的CUDA架构；Auto:自动识别当前环境的架构编译
-WITH_TENSORRT     是否开启 TensorRT                                                          OFF
-TENSORRT_ROOT     TensorRT_lib的路径，该路径指定后会编译TRT子图功能eg:/paddle/nvidia/TensorRT/  /usr
+WITH_GPU          GPU 지원 여부                                                                  ON
+WITH_AVX          AVX 명령어가 포함된 Paddle 바이너리 컴파일 여부                                 ON
+WITH_PYTHON       Python 인터프리터 내장 및 Wheel 패키지 컴파일 여부                              ON
+WITH_TESTING      단위 테스트 활성화 여부                                                        OFF
+WITH_MKL          MKL 수학 라이브러리 사용 여부, 아니면 OpenBLAS 사용                              ON
+WITH_SYSTEM_BLAS  시스템 기본 BLAS 사용 여부                                                      OFF
+WITH_DISTRIBUTE   분산 컴파일 버전 활성화 여부                                                    OFF
+WITH_BRPC_RDMA    BRPC, RDMA를 RPC 프로토콜로 사용할지 여부                                       OFF
+ON_INFER          추론 최적화 기능 활성화 여부                                                    OFF
+CUDA_ARCH_NAME    현재 CUDA 아키텍처만을 대상으로 컴파일할지 여부                                 All: 모든 지원 아키텍처 컴파일; Auto: 현재 환경 자동 감지
+WITH_TENSORRT     TensorRT 활성화 여부                                                            OFF
+TENSORRT_ROOT     TensorRT 라이브러리 경로 지정, 예: /paddle/nvidia/TensorRT/                    /usr
 ================  ============================================================================  =============================================================
