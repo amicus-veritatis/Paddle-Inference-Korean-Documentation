@@ -4,7 +4,7 @@
 
 C++ 예제 코드는 [링크](https://github.com/PaddlePaddle/Paddle-Inference-Demo/tree/master/c%2B%2B/cuda_linux_demo)를 참고하세요. 아래에서는 `프로세스 분석`과 `컴파일 및 실행 예제` 두 부분으로 나누어 설명합니다.
 
-### 1.1 프로세스 분석
+### 1.1 절차 분석
 
 #### 1.1.1 추론 라이브러리 준비
 
